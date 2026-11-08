@@ -132,11 +132,12 @@
     }
 
     const key = WC.normalizeUrl(p.url);
-    const existing = O.byUrl.get(key) || null;
+    const existing = await Store.findByUrl(p.url);
 
     const st = {
       payload: p,
       existing,
+      forceNew: false,
       key,
       tags: existing ? [...(existing.tags || [])] : [],
       boardId: existing ? existing.boardId : (O.boardId && boards.some((b) => b.id === O.boardId) ? O.boardId : (boards[0] || { id: 'inbox' }).id),
@@ -187,6 +188,7 @@
         '<button type="button" class="wc-act wc-openDash">Dashboard &#8599;</button>' +
         '<span class="wc-sp"></span>' +
         '<button type="button" class="wc-act wc-cancel">Cancel</button>' +
+        (st.existing ? '<button type="button" class="wc-act wc-copy">Save another copy</button>' : '') +
         '<button type="button" class="wc-act wc-savebtn">' + (st.existing ? 'Update' : 'Save') + '</button>' +
       '</footer>';
 
@@ -283,6 +285,12 @@
       } catch (e) { toast('LinkClipper was updated - reload this page'); }
     });
     card.querySelector('.wc-savebtn').addEventListener('click', () => saveDialog(st, card));
+    if (st.existing) card.querySelector('.wc-copy').addEventListener('click', () => {
+      st.forceNew = true;
+      card.querySelector('.wc-copy').remove();
+      card.querySelector('.wc-savebtn').textContent = 'Save copy';
+      card.querySelector('.wc-meta').textContent = 'Saving another copy of this item';
+    });
 
     document.body.appendChild(back);
     dlgOpen = { back };
@@ -293,6 +301,15 @@
     const saveBtn = card.querySelector('.wc-savebtn');
     saveBtn.disabled = true;
     try {
+      if (!st.existing && !st.forceNew) {
+        const found = await Store.findByUrl(st.payload.url);
+        if (found) {
+          closeDialog();
+          toast('Already saved — review the existing item');
+          await openDialog(() => st.payload);
+          return;
+        }
+      }
       const title = (card.querySelector('.wc-tedit').textContent || '').trim() || 'Untitled';
       const note = card.querySelector('.wc-note').value.trim();
       let boardId = st.boardId;
@@ -305,7 +322,7 @@
       }
 
       let item;
-      if (st.existing) {
+      if (st.existing && !st.forceNew) {
         item = await Store.saveItem({
           id: st.existing.id,
           title,
@@ -338,7 +355,7 @@
       pingSync();
       closeDialog();
       refreshStates();
-      toast('Saved to ' + O.boardName + ' \u2713', [{ label: 'Edit', fn: () => openEdit(item.id) }]);
+       toast((st.existing && !st.forceNew ? 'Updated in ' : 'Saved to ') + O.boardName + ' \u2713', [{ label: 'Edit', fn: () => openEdit(item.id) }]);
     } catch (e) {
       toast('LinkClipper was updated - reload this page');
       saveBtn.disabled = false;

@@ -308,7 +308,7 @@ textarea.wc-inp { resize: vertical; min-height: 44px; }
 .wc-chip-tag b { cursor: pointer; opacity: 0.65; }
 .wc-chip-tag b:hover { opacity: 1; }
 
-.wc-foot { display: flex; align-items: center; gap: 7px; margin-top: 14px; }
+.wc-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
 .wc-sp { flex: 1; }
 .wc-act {
   padding: 8px 13px;

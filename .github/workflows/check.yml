@@ -30,6 +30,9 @@ jobs:
             if (!(Test-Path ("icons\icon$icon.png"))) { Write-Error "missing icon$icon"; exit 1 }
           }
 
+      - name: Run storage and duplicate tests
+        run: node --test tests/*.cjs
+
       - name: Build store zip
         shell: pwsh
         run: ./tools/pack.ps1

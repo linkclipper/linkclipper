@@ -9,6 +9,7 @@ const state = {
   meta: null,      // {title, description, image, canonical, selection, paragraphCount, ogType, ogImage}
   item: null,      // draft item
   existing: null,  // previously saved item for the same URL, if any
+  forceNew: false, // user explicitly chose another copy
   boards: [],
   tags: [],
   newBoardColor: WC.BOARD_COLORS[0],
@@ -34,11 +35,11 @@ async function init() {
 
   state.boards = await Store.liveBoards();
   state.tags = (await Store.allTags()).map((t) => t.tag);
-  renderBoards();
+  await renderDuplicateState();
+  await renderBoards();
   renderTags();
   renderKnownTags();
   renderPreview();
-  renderDuplicateState();
 
   show('saveView');
   el('tagInput').focus({ preventScroll: true });
@@ -156,7 +157,7 @@ function renderPreview() {
   el('titleInput').addEventListener('input', () => { state.item.title = el('titleInput').textContent.trim() || 'Untitled'; });
 }
 
-function renderBoards() {
+async function renderBoards() {
   const sel = el('boardSelect');
   sel.innerHTML = '';
   state.boards.forEach((b) => {
@@ -170,11 +171,11 @@ function renderBoards() {
   newOpt.textContent = '＋ New board…';
   sel.appendChild(newOpt);
 
-  const settings = Store.getSettings().then((s) => {
-    const last = state.boards.find((b) => b.id === s.lastBoardId);
-    state.item.boardId = last ? last.id : (state.boards[0] && state.boards[0].id) || 'inbox';
-    sel.value = state.item.boardId;
-  });
+  const settings = await Store.getSettings();
+  const last = state.boards.find((b) => b.id === settings.lastBoardId);
+  const savedBoard = state.existing && state.boards.find((b) => b.id === state.existing.boardId);
+  state.item.boardId = savedBoard ? savedBoard.id : (last ? last.id : (state.boards[0] && state.boards[0].id) || 'inbox');
+  sel.value = state.item.boardId;
 }
 
 el('boardSelect').addEventListener('change', () => {
@@ -266,18 +267,22 @@ el('tagInput').addEventListener('blur', () => {
 
 // -------------------------------------------------------------- duplicate
 
-function renderDuplicateState() {
-  Store.findByUrl(state.item.url).then((found) => {
-    state.existing = found;
-    if (found) {
-      const notice = el('duplicateNotice');
-      notice.classList.remove('hidden');
-      const board = state.boards.find((b) => b.id === found.boardId);
-      notice.innerHTML = '';
-      notice.append('Already saved in ' + (board ? board.name : '?') + ' · updating it instead.');
-      el('saveBtn').textContent = 'Update saved item';
-    }
-  });
+async function renderDuplicateState() {
+  const found = await Store.findByUrl(state.item.url, state.item.canonical);
+  state.existing = found;
+  const notice = el('duplicateNotice');
+  notice.classList.toggle('hidden', !found);
+  el('duplicateNewBtn').classList.toggle('hidden', !found);
+  if (!found) return;
+
+  const board = state.boards.find((b) => b.id === found.boardId);
+  notice.textContent = 'Already saved in ' + (board ? board.name : 'a board') + '. Update it or save another copy.';
+  state.item.title = found.title || state.item.title;
+  state.item.note = found.note || '';
+  state.item.tags = [...(found.tags || [])];
+  state.item.thumbnail = found.thumbnail || state.item.thumbnail;
+  el('noteInput').value = state.item.note;
+  el('saveBtn').textContent = 'Update saved item';
 }
 
 // -------------------------------------------------------------- save flow
@@ -293,6 +298,20 @@ async function save() {
   btn.disabled = true;
   btn.style.filter = 'grayscale(0.4)';
 
+  // Another surface may have saved this page since the popup opened.
+  if (!state.existing && !state.forceNew) {
+    const found = await Store.findByUrl(state.item.url, state.item.canonical);
+    if (found) {
+      await renderDuplicateState();
+      await renderBoards();
+      renderTags();
+      renderPreview();
+      btn.disabled = false;
+      btn.style.filter = '';
+      return;
+    }
+  }
+
   // A "new board" may have been typed without pressing anywhere else.
   if (el('boardSelect').value === '__new__' || el('newBoardRow').classList.contains('hidden') === false) {
     const name = el('newBoardName').value.trim();
@@ -304,7 +323,7 @@ async function save() {
 
   const patch = Object.assign({}, state.item, { title: state.item.title });
   let saved;
-  if (state.existing) {
+  if (state.existing && !state.forceNew) {
     // Re-saving an existing URL updates it in place (keeps createdAt).
     saved = await Store.saveItem(Object.assign({}, state.existing, {
       title: patch.title,
@@ -321,7 +340,9 @@ async function save() {
   trySyncQuietly();
 
   const board = state.boards.find((b) => b.id === saved.boardId);
-  el('doneText').textContent = 'Saved ✓ ' + (board ? board.name : '');
+  el('doneText').textContent = (state.existing && !state.forceNew ? 'Updated ✓ ' : 'Saved ✓ ') + (board ? board.name : '');
+  state.existing = saved;
+  state.forceNew = false;
   show('doneView');
 }
 
@@ -337,6 +358,12 @@ function trySyncQuietly() {
 
 el('noteInput').addEventListener('input', () => { state.item.note = el('noteInput').value; });
 el('saveBtn').addEventListener('click', save);
+el('duplicateNewBtn').addEventListener('click', () => {
+  state.forceNew = true;
+  el('saveBtn').textContent = 'Save another copy';
+  el('duplicateNewBtn').classList.add('hidden');
+  el('duplicateNotice').textContent = 'This will create a separate card for the same page.';
+});
 el('viewBtn').addEventListener('click', openDashboard);
 el('openDashboard').addEventListener('click', (e) => { e.preventDefault(); openDashboard(); });
 
@@ -349,9 +376,11 @@ el('editBtn').addEventListener('click', () => {
 
 el('anotherBtn').addEventListener('click', async () => {
   // Duplicate explicitly: keep copy, save as a fresh item.
-  state.existing = null;
-  el('duplicateNotice').classList.add('hidden');
-  el('saveBtn').textContent = 'Save to collection';
+  state.forceNew = true;
+  el('duplicateNotice').classList.remove('hidden');
+  el('duplicateNotice').textContent = 'This will create a separate card for the same page.';
+  el('duplicateNewBtn').classList.add('hidden');
+  el('saveBtn').textContent = 'Save another copy';
   show('saveView');
   el('saveBtn').disabled = false;
   el('saveBtn').style.filter = '';

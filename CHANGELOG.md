@@ -2,6 +2,10 @@
 
 ## 0.4.0 — share links (Phase B, v1)
 
+- Duplicate saves now load the saved board, title, tags and note before editing
+  in the popup. Updating preserves the original item; **Save another copy**
+  is explicit in both the popup and in-page dialog. Tracking parameters and
+  canonical URLs are considered when matching; deleted items are ignored.
 - Cards now have **Copy original link** beside Open, with a clipboard fallback
   for browsers where the async Clipboard API is unavailable.
 - Fixed the Share entry point: selecting any board now shows an explicit
