@@ -2,6 +2,9 @@
 
 ## 0.4.0 — share links (Phase B, v1)
 
+- Fixed the Share entry point: selecting any board now shows an explicit
+  **Share board** button; each sidebar board also has Share and Edit controls.
+  The existing-board editor was previously unreachable from the UI.
 - **Board share links**: any board can be shared via a link that carries a
   read-only **snapshot** inside the URL fragment (`linkclipper.github.io/b/#d=…`).
   - No server, no keys, no sync required — works for anyone, recipient needs no
@@ -13,8 +16,9 @@
   - The public viewer escapes everything it renders; links are opened with
     `noopener noreferrer`; thumbnails load with `no-referrer` and fall back
     silently when dead.
-- Board editor gains "Share this board…" (boards flip to `visibility: 'link'`
-  and receive a `shareId` — the shape Phase B2 keys off).
+- Board editor gains "Share this board…"; opening a share preview does not
+  mutate the board or sync anything. `visibility`/`shareId` are reserved for
+  future live sharing, not set by a static snapshot link.
 - Schema: migration ladder stepped to **v2** (existing boards stamped to the
   share shape; idempotent, runs in place).
 - Share codec is a standalone lib (`lib/shares.js`), mirrored decode-side on the

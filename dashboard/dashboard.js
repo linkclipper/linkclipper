@@ -146,7 +146,9 @@ function renderBoards() {
       <span class="board-dot" style="background:${esc(b.color)}"></span>
       <span class="board-name" title="${esc(b.description || b.name)}">${esc(b.name)}</span>
       <span class="count">${counts[b.id] || 0}</span>
-      <button class="board-del" data-del="${esc(b.id)}" title="Delete board">&#128465;</button>
+      <button class="board-action" data-share="${esc(b.id)}" title="Share ${esc(b.name)}" aria-label="Share ${esc(b.name)}">&#8599;</button>
+      <button class="board-action" data-edit="${esc(b.id)}" title="Edit ${esc(b.name)}" aria-label="Edit ${esc(b.name)}">&#9998;</button>
+      ${b.id === 'inbox' ? '' : `<button class="board-del" data-del="${esc(b.id)}" title="Delete ${esc(b.name)}" aria-label="Delete ${esc(b.name)}">&#128465;</button>`}
     </div>`).join('');
 
   const deleted = state.items.filter((i) => !i.deletedAt && !boardById(i.boardId)).length;
@@ -188,6 +190,16 @@ function renderBoards() {
       toast('Moved to ' + (b ? b.name : '?') + ' ✓');
       trySyncQuiet();
       refresh();
+    });
+  });
+  nav.querySelectorAll('[data-share], [data-edit]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-share') || btn.getAttribute('data-edit');
+      const board = boardById(id);
+      if (!board) return;
+      if (btn.hasAttribute('data-share')) openShareModal(board);
+      else openBoardModal(board);
     });
   });
   nav.querySelectorAll('[data-del]').forEach((btn) => {
@@ -288,6 +300,7 @@ function cardHtml(i) {
 function renderContent() {
   const items = visibleItems();
   const f = state.filters;
+  const selectedBoard = f.board && boardById(f.board);
 
   const chips = [];
   if (f.board) {
@@ -304,7 +317,9 @@ function renderContent() {
 
   el('content').innerHTML =
     chipRow +
-    `<div class="count-line"><span>${items.length} item${items.length === 1 ? '' : 's'}</span></div>` +
+    `<div class="count-line board-toolbar"><span>${items.length} item${items.length === 1 ? '' : 's'}</span>
+      ${selectedBoard ? `<span class="spacer"></span><button id="editSelectedBoard" class="btn">Edit board</button><button id="shareSelectedBoard" class="btn primary">Share board</button>` : ''}
+    </div>` +
     (items.length
       ? `<div class="grid">${items.map(cardHtml).join('')}</div>`
       : emptyHtml());
@@ -325,6 +340,11 @@ function emptyHtml() {
 
 // click handlers for cards (modal + tag filter + filter chips)
 function bindContent() {
+  const selectedBoard = boardById(state.filters.board);
+  if (selectedBoard) {
+    el('editSelectedBoard').addEventListener('click', () => openBoardModal(selectedBoard));
+    el('shareSelectedBoard').addEventListener('click', () => openShareModal(selectedBoard));
+  }
   el('content').querySelectorAll('[data-clear]').forEach((chip) => {
     chip.addEventListener('click', () => {
       const key = chip.getAttribute('data-clear');
@@ -836,11 +856,6 @@ function renderShareModal(board) {
     el('shLog').textContent = 'Copying failed — the link is selected; press Ctrl+C.';
   });
 
-  // Stamp the share shape on the board: visibility flips to 'link' once so
-  // Phase B2 (live boards) can key shares off shareId. No network involved.
-  if (board.visibility !== 'link' || !board.shareId) {
-    Store.saveBoard({ id: board.id, visibility: 'link', shareId: (board.shareId || WC.uid()) });
-  }
 }
 
 async function copyText(text) {

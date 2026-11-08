@@ -118,6 +118,11 @@
         const b = state.boards.find((x) => x.id === 'inbox') || state.boards[0];
         openShareModal(b);
       }
+      else if (st === 'selected-board') {
+        state.filters.board = 'b2';
+        renderBoards();
+        renderContent();
+      }
       document.documentElement.setAttribute('data-devstate', st);
     }, 300);
   </script>
