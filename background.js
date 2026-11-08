@@ -1,4 +1,4 @@
-﻿// LinkClipper - lightweight service worker.
+// LinkClipper - lightweight service worker.
 // Jobs: seed default boards on install, keep the toolbar badge count fresh.
 
 importScripts('lib/shared.js', 'lib/store.js', 'lib/supabase.js');
@@ -70,7 +70,7 @@ function extractReadable(html) {
     .replace(/&#8212;/gi, '\u2014')
     .replace(/&#(\d+);/g, ' ');
   s = s.replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-  if (s.length > 14000) s = s.slice(0, 14000) + '\n\nâ€¦';
+  if (s.length > 14000) s = s.slice(0, 14000) + '\n\n…';
   return s;
 }
 

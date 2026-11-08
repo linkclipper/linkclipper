@@ -1,4 +1,4 @@
-﻿// LinkClipper - dashboard logic: boards, filters, masonry grid, editing, sync.
+// LinkClipper - dashboard logic: boards, filters, masonry grid, editing, sync.
 const el = (id) => document.getElementById(id);
 const esc = WC.escapeHtml;
 
@@ -185,7 +185,7 @@ function renderBoards() {
       if (!item || item.boardId === target) return;
       await Store.saveItem({ id, boardId: target });
       const b = boardById(target);
-      toast('Moved to ' + (b ? b.name : '?') + ' âœ“');
+      toast('Moved to ' + (b ? b.name : '?') + ' ✓');
       trySyncQuiet();
       refresh();
     });
@@ -239,7 +239,7 @@ WC.fallbackThumb = function (img) {
   div.style.cssText =
     'height:110px;background:linear-gradient(135deg,' + (img.dataset.color || '#64748B') + 'cc,' +
     (img.dataset.color || '#64748B') + '77)';
-  div.textContent = img.dataset.emoji || 'âš™';
+  div.textContent = img.dataset.emoji || '⚙';
   wrap.innerHTML = '';
   wrap.appendChild(div);
 };
@@ -268,7 +268,7 @@ function cardHtml(i) {
       </a>
       <div class="card-body">
         <div class="card-title">${esc(i.title)}</div>
-        <div class="card-meta">${esc(i.source)} Â· ${esc(date)}</div>
+        <div class="card-meta">${esc(i.source)} · ${esc(date)}</div>
         ${i.note ? `<div class="note-snippet">&#128221; ${esc(i.note)}</div>` : ''}
         ${(i.tags || []).length ? `<div class="card-tags">${tags}</div>` : ''}
         <div class="board-line">
@@ -292,11 +292,11 @@ function renderContent() {
   const chips = [];
   if (f.board) {
     const b = boardById(f.board);
-    chips.push(`<span class="active-chip" data-clear="board">${esc(b ? b.name : '?')} âœ•</span>`);
+    chips.push(`<span class="active-chip" data-clear="board">${esc(b ? b.name : '?')} ✕</span>`);
   }
-  if (f.type) chips.push(`<span class="active-chip" data-clear="type">${esc(WC.TYPES[f.type].label)} âœ•</span>`);
-  if (f.tag) chips.push(`<span class="active-chip" data-clear="tag">#${esc(f.tag)} âœ•</span>`);
-  if (f.q) chips.push(`<span class="active-chip" data-clear="q">"${esc(f.q)}" âœ•</span>`);
+  if (f.type) chips.push(`<span class="active-chip" data-clear="type">${esc(WC.TYPES[f.type].label)} ✕</span>`);
+  if (f.tag) chips.push(`<span class="active-chip" data-clear="tag">#${esc(f.tag)} ✕</span>`);
+  if (f.q) chips.push(`<span class="active-chip" data-clear="q">"${esc(f.q)}" ✕</span>`);
 
   const chipRow = chips.length
     ? `<div class="count-line" id="chipRow">${chips.join('')}<span class="spacer" style="flex:1"></span></div>`
@@ -417,7 +417,7 @@ function openMoveMenu(id, anchor) {
       const b = boardById(btn.getAttribute('data-b'));
       await Store.saveItem({ id, boardId: b.id });
       closeMoveMenu();
-      toast('Moved to ' + b.name + ' âœ“');
+      toast('Moved to ' + b.name + ' ✓');
       trySyncQuiet();
       refresh();
     });
@@ -525,7 +525,7 @@ async function openReaderInline(i, heroDefault) {
   const paint = (text, warn) => {
     hero.innerHTML =
       '<div class="reader"><div class="reader-head"><span class="reader-cap">' +
-      (warn ? 'Reader' : 'Reader Â· readable text') +
+      (warn ? 'Reader' : 'Reader · readable text') +
       '</span><div class="reader-acts">' +
       '<button id="rBack" class="prev-btn" title="Back to edit fields">&#8592; Edit</button>' +
       '<a class="prev-btn" href="' + esc(i.url) + '" target="_blank" rel="noreferrer">Open original &#8599;</a>' +
@@ -556,7 +556,7 @@ async function openReaderInline(i, heroDefault) {
   try {
     const cached = (i.readerText || '').trim();
     if (cached) { paint(cached, false); return; }
-    paint('Fetching article textâ€¦', false);
+    paint('Fetching article text…', false);
     const res = await chrome.runtime.sendMessage({ type: 'wc:read', url: i.url });
     if (res && res.ok && res.text && res.text.trim().length > 160) {
       await Store.saveItem({ id: i.id, readerText: res.text.trim(), readerAt: WC.nowISO() });
@@ -623,8 +623,8 @@ function renderItemModal(i, opts) {
       <span class="type-badge" style="background:${esc(tm.color)}">${tm.emoji} ${esc(tm.label)}</span>
       ${previewButtonHtml(emb, i)}
     </div>
-    <div class="meta-line">${esc(i.source)} Â· saved ${esc(WC.fmtDate(i.createdAt))}<br>
-      <a href="${esc(i.url)}" target="_blank" rel="noreferrer">${esc(i.url.length > 90 ? i.url.slice(0, 90) + 'â€¦' : i.url)}</a></div>
+    <div class="meta-line">${esc(i.source)} · saved ${esc(WC.fmtDate(i.createdAt))}<br>
+      <a href="${esc(i.url)}" target="_blank" rel="noreferrer">${esc(i.url.length > 90 ? i.url.slice(0, 90) + '…' : i.url)}</a></div>
 
     <label class="field-label">Title</label>
     <input id="mTitle" class="input" value="${esc(i.title)}" />
@@ -667,7 +667,7 @@ function renderItemModal(i, opts) {
   const local = { tags: [...(i.tags || [])] };
 
   const paintTags = () => {
-    el('mTags').innerHTML = local.tags.map((t) => `<span class="chip">${esc(t)} <b data-t="${esc(t)}">Ã—</b></span>`).join('');
+    el('mTags').innerHTML = local.tags.map((t) => `<span class="chip">${esc(t)} <b data-t="${esc(t)}">×</b></span>`).join('');
     el('mTags').querySelectorAll('[data-t]').forEach((b) => {
       b.addEventListener('click', () => {
         local.tags = local.tags.filter((x) => x !== b.getAttribute('data-t'));
@@ -700,7 +700,7 @@ function renderItemModal(i, opts) {
       tags: local.tags,
     });
     closeModal();
-    toast('Saved âœ“');
+    toast('Saved ✓');
     trySyncQuiet();
     refresh({ markClean: false });
   });
@@ -737,7 +737,7 @@ function renderBoardModal(existing) {
   el('modal').innerHTML = `
     <h2>${b ? 'Rename board' : 'New board'}</h2>
     <label class="field-label">Name</label>
-    <input id="mName" class="input" value="${esc(b ? b.name : '')}" placeholder="e.g. Codeweb Â· motivation Â· learn rust" />
+    <input id="mName" class="input" value="${esc(b ? b.name : '')}" placeholder="e.g. Codeweb · motivation · learn rust" />
     <label class="field-label">Color</label>
     <div id="mColors" class="row" style="margin-top:4px;gap:6px"></div>
     <div class="row">
@@ -769,7 +769,7 @@ function renderBoardModal(existing) {
     if (!name) { toast('Give the board a name'); return; }
     await Store.saveBoard(b ? { id: b.id, name, color } : { name, color });
     closeModal();
-    toast(b ? 'Board renamed âœ“' : 'Board created âœ“');
+    toast(b ? 'Board renamed ✓' : 'Board created ✓');
     trySyncQuiet();
     await refresh();
   });
@@ -791,7 +791,7 @@ function openSyncModal() {
 function renderSyncModal() {
   const s = state.settings;
   el('modal').innerHTML = `
-    <h2>â˜ Cloud sync (Supabase)</h2>
+    <h2>☁ Cloud sync (Supabase)</h2>
     <div class="sync-hint">
       LinkClipper is local-first. Nothing leaves your browser until you connect
       a free <b>Supabase</b> project. Full steps are in the project README.
@@ -799,7 +799,7 @@ function renderSyncModal() {
     <label class="field-label">Project URL</label>
     <input id="sUrl" class="input" placeholder="https://xxxx.supabase.co" value="${esc(s.supabaseUrl || '')}" />
     <label class="field-label">Anon key</label>
-    <input id="sKey" class="input" type="password" placeholder="eyJhbGciOiâ€¦" value="${esc(s.supabaseKey || '')}" />
+    <input id="sKey" class="input" type="password" placeholder="eyJhbGciOi…" value="${esc(s.supabaseKey || '')}" />
 
     <div class="row">
       <button id="sTest" class="btn">Test connection</button>
@@ -829,21 +829,21 @@ function renderSyncModal() {
   el('sClose').addEventListener('click', closeModal);
   el('sTest').addEventListener('click', async () => {
     try {
-      await saveAndLog('Testingâ€¦');
+      await saveAndLog('Testing…');
       if (!Sync.configured(state.settings)) throw new Error('URL or key missing');
       await Sync.test(state.settings);
-      log('âœ“ Connected. Supabase tables reachable at ' + Sync.normalizeUrl(state.settings.supabaseUrl));
-    } catch (e) { log('âœ— ' + e.message); }
+      log('✓ Connected. Supabase tables reachable at ' + Sync.normalizeUrl(state.settings.supabaseUrl));
+    } catch (e) { log('✗ ' + e.message); }
   });
 
   el('sSync').addEventListener('click', async () => {
     try {
-      await saveAndLog('Syncingâ€¦');
+      await saveAndLog('Syncing…');
       if (!Sync.configured(state.settings)) throw new Error('Configure URL + key first');
       const res = await Sync.sync(state.settings);
-      log(`âœ“ Synced ${WC.fmtDate(res.at)}\npushed ${res.pushed}, pulled ${res.pulled}\n${res.items} items Â· ${res.boards} boards`);
+      log(`✓ Synced ${WC.fmtDate(res.at)}\npushed ${res.pushed}, pulled ${res.pulled}\n${res.items} items · ${res.boards} boards`);
       await refresh({ markClean: true });
-    } catch (e) { log('âœ— ' + e.message); }
+    } catch (e) { log('✗ ' + e.message); }
   });
 
   el('sForget').addEventListener('click', async () => {
@@ -862,7 +862,7 @@ function lastSyncLine() {
 function renderSyncStatusShort() {
   const s = state.settings;
   el('syncStatusShort').textContent = Sync.configured(s)
-    ? 'â˜ ' + (s.lastSyncAt ? WC.fmtDate(s.lastSyncAt) : 'not synced yet')
+    ? '☁ ' + (s.lastSyncAt ? WC.fmtDate(s.lastSyncAt) : 'not synced yet')
     : 'local-only';
 }
 
@@ -900,7 +900,7 @@ async function exportJson() {
   a.download = 'LinkClipper-export-' + new Date().toISOString().slice(0, 10) + '.json';
   a.click();
   URL.revokeObjectURL(a.href);
-  toast('Exported JSON âœ“');
+  toast('Exported JSON ✓');
 }
 
 async function importJson(e) {
@@ -928,7 +928,7 @@ async function importJson(e) {
         iCount++;
       }
     }
-    toast('Imported ' + iCount + ' records âœ“');
+    toast('Imported ' + iCount + ' records ✓');
     await refresh();
   } catch (err) {
     toast('Import failed: ' + err.message);

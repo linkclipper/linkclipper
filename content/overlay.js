@@ -1,4 +1,4 @@
-﻿// LinkClipper - in-page saving for social sites.
+// LinkClipper - in-page saving for social sites.
 // Injects brand "W" buttons into YouTube (watch bar, Shorts rail, list
 // thumbnails), Instagram action stacks, X (Twitter) post rows, Reddit post
 // rows and TikTok. Clicking opens an in-page quick-save dialog (board picker,
@@ -203,7 +203,7 @@
     });
     const newOpt = document.createElement('option');
     newOpt.value = '__new__';
-    newOpt.textContent = 'ï¼‹ New boardâ€¦';
+    newOpt.textContent = '＋ New board…';
     sel.appendChild(newOpt);
     sel.value = st.boardId;
 
@@ -229,7 +229,7 @@
         c.className = 'wc-chip-tag';
         c.textContent = t + ' ';
         const x = document.createElement('b');
-        x.textContent = 'Ã—';
+        x.textContent = '×';
         x.addEventListener('click', () => { st.tags.splice(i, 1); paintTags(); fillDl(); });
         c.appendChild(x);
         chipsRow.appendChild(c);
@@ -443,7 +443,7 @@
     return {
       url: location.href,
       title: ((document.querySelector('meta[property="og:title"]') || {}).content ||
-        document.title || '').replace(/\s*[â€¢|]\s*Instagram.*$/i, '').trim(),
+        document.title || '').replace(/\s*[•|]\s*Instagram.*$/i, '').trim(),
       thumbnail: (document.querySelector('meta[property="og:image"]') || {}).content ||
         (document.querySelector('video') || {}).poster || '',
       type: isPost ? 'reel' : 'page',

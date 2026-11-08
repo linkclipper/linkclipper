@@ -1,4 +1,4 @@
-﻿// LinkClipper - popup logic.
+// LinkClipper - popup logic.
 // Flow: query active tab -> inject metadata extractor -> classify type ->
 // user picks board/tags/note -> save to local store (-> optional cloud sync).
 
@@ -150,9 +150,9 @@ function renderPreview() {
   badge.style.background = tm.color;
 
   el('titleInput').textContent = state.item.title;
-  el('metaLine').textContent = [state.item.source, state.item.selection ? '"â€¦' + state.item.selection.slice(0, 80) + 'â€¦"' : '']
+  el('metaLine').textContent = [state.item.source, state.item.selection ? '"…' + state.item.selection.slice(0, 80) + '…"' : '']
     .filter(Boolean)
-    .join(' Â· ');
+    .join(' · ');
   el('titleInput').addEventListener('input', () => { state.item.title = el('titleInput').textContent.trim() || 'Untitled'; });
 }
 
@@ -167,7 +167,7 @@ function renderBoards() {
   });
   const newOpt = document.createElement('option');
   newOpt.value = '__new__';
-  newOpt.textContent = 'ï¼‹ New boardâ€¦';
+  newOpt.textContent = '＋ New board…';
   sel.appendChild(newOpt);
 
   const settings = Store.getSettings().then((s) => {
@@ -221,7 +221,7 @@ function renderTags() {
     c.className = 'chip';
     c.textContent = t + ' ';
     const x = document.createElement('b');
-    x.textContent = 'Ã—';
+    x.textContent = '×';
     x.title = 'Remove tag';
     x.addEventListener('click', () => {
       state.item.tags.splice(i, 1);
@@ -274,7 +274,7 @@ function renderDuplicateState() {
       notice.classList.remove('hidden');
       const board = state.boards.find((b) => b.id === found.boardId);
       notice.innerHTML = '';
-      notice.append('Already saved in ' + (board ? board.name : '?') + ' Â· updating it instead.');
+      notice.append('Already saved in ' + (board ? board.name : '?') + ' · updating it instead.');
       el('saveBtn').textContent = 'Update saved item';
     }
   });
@@ -321,7 +321,7 @@ async function save() {
   trySyncQuietly();
 
   const board = state.boards.find((b) => b.id === saved.boardId);
-  el('doneText').textContent = 'Saved âœ“ ' + (board ? board.name : '');
+  el('doneText').textContent = 'Saved ✓ ' + (board ? board.name : '');
   show('doneView');
 }
 
