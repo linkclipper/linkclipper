@@ -2,6 +2,10 @@
 
 ## 0.4.0 — share links (Phase B, v1)
 
+- **Bulk actions** in the dashboard: select cards (or all visible cards), move
+  them to a board, add a tag, or delete with a confirmation. Selection stays
+  within the current filtered view; each operation writes once to local storage
+  and keeps tombstones for sync. Cards are keyboard-selectable in selection mode.
 - Duplicate saves now load the saved board, title, tags and note before editing
   in the popup. Updating preserves the original item; **Save another copy**
   is explicit in both the popup and in-page dialog. Tracking parameters and

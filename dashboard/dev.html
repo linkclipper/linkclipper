@@ -123,6 +123,11 @@
         renderBoards();
         renderContent();
       }
+      else if (st === 'bulk') {
+        state.bulkMode = true;
+        state.selected = new Set(['i-yt', 'i-ig']);
+        renderContent();
+      }
       document.documentElement.setAttribute('data-devstate', st);
     }, 300);
   </script>

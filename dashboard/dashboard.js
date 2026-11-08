@@ -7,6 +7,8 @@ const state = {
   boards: [],
   settings: null,
   filters: { board: '', q: '', type: '', tag: '', sort: 'new' },
+  bulkMode: false,
+  selected: new Set(),
 };
 
 init();
@@ -272,12 +274,16 @@ function cardHtml(i) {
   const date = WC.fmtDate(i.updatedAt);
   const emb = embedInfo(i);
   const tags = (i.tags || []).map((t) => `<span class="tag" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
+  const selecting = state.bulkMode;
+  const chosen = state.selected.has(i.id);
   return `
-    <div class="card" data-id="${esc(i.id)}">
-      <a class="thumb" href="${esc(i.url)}" target="_blank" rel="noreferrer">
+    <div class="card ${selecting ? 'selectable' : ''} ${chosen ? 'selected' : ''}" data-id="${esc(i.id)}"
+         ${selecting ? `role="checkbox" aria-checked="${chosen}" aria-label="Select ${esc(i.title)}" tabindex="0"` : ''}>
+      ${selecting ? `<span class="select-mark" aria-hidden="true">${chosen ? '&#10003;' : ''}</span>` : ''}
+      ${selecting ? '<div class="thumb">' : `<a class="thumb" href="${esc(i.url)}" target="_blank" rel="noreferrer">`}
         ${thumbHtml(i)}
         <span class="type-badge" style="background:${esc(tm.color)}">${tm.emoji} ${esc(tm.label)}</span>
-      </a>
+      ${selecting ? '</div>' : '</a>'}
       <div class="card-body">
         <div class="card-title">${esc(i.title)}</div>
         <div class="card-meta">${esc(i.source)} · ${esc(date)}</div>
@@ -287,19 +293,22 @@ function cardHtml(i) {
           <span class="board-dot" style="background:${esc(board ? board.color : '#9ca3af')}"></span>
           ${esc(board ? board.name : 'No board')}
         </div>
-        <div class="card-acts">
+        ${selecting ? '' : `<div class="card-acts">
           ${emb ? `<button class="cact pv" data-prev="${esc(i.id)}" title="Watch / read here">&#9654;</button>` : ''}
           <a class="cact op" href="${esc(i.url)}" target="_blank" rel="noreferrer" title="Open original">&#8599;</a>
           <button class="cact cp" data-act="copy" type="button" title="Copy original link" aria-label="Copy original link">&#10697;</button>
           <button class="cact mv" data-act="move" title="Move to another board">&#8620;</button>
           <button class="cact del" data-act="del" title="Delete">&#128465;</button>
-        </div>
+        </div>`}
       </div>
     </div>`;
 }
 
 function renderContent() {
   const items = visibleItems();
+  // Selection never includes hidden cards after a board/search/type/tag change.
+  const visibleIds = new Set(items.map((item) => item.id));
+  for (const id of state.selected) if (!visibleIds.has(id)) state.selected.delete(id);
   const f = state.filters;
   const selectedBoard = f.board && boardById(f.board);
 
@@ -319,8 +328,24 @@ function renderContent() {
   el('content').innerHTML =
     chipRow +
     `<div class="count-line board-toolbar"><span>${items.length} item${items.length === 1 ? '' : 's'}</span>
-      ${selectedBoard ? `<span class="spacer"></span><button id="editSelectedBoard" class="btn">Edit board</button><button id="shareSelectedBoard" class="btn primary">Share board</button>` : ''}
+      <span class="spacer"></span>
+      ${selectedBoard && !state.bulkMode ? `<button id="editSelectedBoard" class="btn">Edit board</button><button id="shareSelectedBoard" class="btn primary">Share board</button>` : ''}
+      ${items.length && !state.bulkMode ? '<button id="bulkStart" class="btn">Select items</button>' : ''}
+      ${state.bulkMode ? '<button id="bulkCancel" class="btn">Done selecting</button>' : ''}
     </div>` +
+    (state.bulkMode ? `<div class="bulk-bar" aria-label="Bulk actions">
+      <strong>${state.selected.size} selected</strong>
+      <button id="bulkAll" class="btn" type="button">Select all ${items.length}</button>
+      <button id="bulkClear" class="btn" type="button" ${state.selected.size ? '' : 'disabled'}>Clear</button>
+      <select id="bulkBoard" class="input" aria-label="Destination board">
+        <option value="">Move to board…</option>
+        ${state.boards.filter((b) => !b.deletedAt).map((b) => `<option value="${esc(b.id)}">${esc(b.name)}</option>`).join('')}
+      </select>
+      <button id="bulkMove" class="btn" type="button" ${state.selected.size ? '' : 'disabled'}>Move</button>
+      <input id="bulkTag" class="input" aria-label="Tag to add" placeholder="Tag to add" maxlength="64" />
+      <button id="bulkAddTag" class="btn" type="button" ${state.selected.size ? '' : 'disabled'}>Add tag</button>
+      <button id="bulkDelete" class="btn danger" type="button" ${state.selected.size ? '' : 'disabled'}>Delete</button>
+    </div>` : '') +
     (items.length
       ? `<div class="grid">${items.map(cardHtml).join('')}</div>`
       : emptyHtml());
@@ -342,10 +367,17 @@ function emptyHtml() {
 // click handlers for cards (modal + tag filter + filter chips)
 function bindContent() {
   const selectedBoard = boardById(state.filters.board);
-  if (selectedBoard) {
+  if (selectedBoard && !state.bulkMode) {
     el('editSelectedBoard').addEventListener('click', () => openBoardModal(selectedBoard));
     el('shareSelectedBoard').addEventListener('click', () => openShareModal(selectedBoard));
   }
+  const start = el('bulkStart');
+  if (start) start.addEventListener('click', () => {
+    state.bulkMode = true;
+    state.selected.clear();
+    renderContent();
+  });
+  if (state.bulkMode) bindBulkActions();
   el('content').querySelectorAll('[data-clear]').forEach((chip) => {
     chip.addEventListener('click', () => {
       const key = chip.getAttribute('data-clear');
@@ -361,6 +393,7 @@ function bindContent() {
   el('content').querySelectorAll('.tag').forEach((tag) => {
     tag.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (state.bulkMode) { toggleBulkCard(tag.closest('.card')); return; }
       state.filters.tag = tag.getAttribute('data-tag');
       el('tagFilter').value = state.filters.tag;
       renderContent();
@@ -369,8 +402,15 @@ function bindContent() {
 
   el('content').querySelectorAll('.card').forEach((card) => {
     card.addEventListener('click', (e) => {
+      if (state.bulkMode) { toggleBulkCard(card); return; }
       if (e.target.closest('.thumb') || e.target.closest('.cact')) return;
       openItemModal(card.getAttribute('data-id'));
+    });
+    if (state.bulkMode) card.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        toggleBulkCard(card);
+      }
     });
   });
 
@@ -409,13 +449,80 @@ function bindContent() {
 
   // ------------------------------------------------------------ drag & drop
   el('content').querySelectorAll('.card').forEach((card) => {
-    card.draggable = true;
+    card.draggable = !state.bulkMode;
     card.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
       e.dataTransfer.effectAllowed = 'move';
       card.classList.add('dragging');
     });
     card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  });
+}
+
+function toggleBulkCard(card) {
+  const id = card.getAttribute('data-id');
+  if (state.selected.has(id)) state.selected.delete(id);
+  else state.selected.add(id);
+  renderContent();
+  const replacement = [...el('content').querySelectorAll('.card')]
+    .find((c) => c.getAttribute('data-id') === id);
+  if (replacement) replacement.focus({ preventScroll: true });
+}
+
+function bindBulkActions() {
+  let busy = false;
+  el('bulkCancel').addEventListener('click', () => {
+    state.selected.clear();
+    state.bulkMode = false;
+    renderContent();
+  });
+  el('bulkAll').addEventListener('click', () => {
+    state.selected = new Set(visibleItems().map((i) => i.id));
+    renderContent();
+  });
+  el('bulkClear').addEventListener('click', () => {
+    state.selected.clear();
+    renderContent();
+  });
+
+  const runBulk = async (update, message) => {
+    if (busy) return;
+    const ids = [...state.selected];
+    if (!ids.length) return;
+    busy = true;
+    try {
+      const changed = await Store.bulkUpdateItems(ids, update);
+      state.selected.clear();
+      state.bulkMode = false;
+      await refresh();
+      if (changed) trySyncQuiet();
+      toast(changed ? message(changed) : 'No items needed changes');
+    } catch (err) {
+      busy = false;
+      console.error('LinkClipper: bulk update failed', err);
+      toast('Could not update selected items');
+    }
+  };
+
+  el('bulkMove').addEventListener('click', () => {
+    const boardId = el('bulkBoard').value;
+    if (!boardId || !state.boards.some((b) => b.id === boardId && !b.deletedAt)) {
+      toast('Choose a destination board'); return;
+    }
+    runBulk((item) => item.boardId === boardId ? null : { boardId },
+      (n) => `Moved ${n} item${n === 1 ? '' : 's'}`);
+  });
+  el('bulkAddTag').addEventListener('click', () => {
+    const tag = el('bulkTag').value.trim().replace(/^#/, '').toLowerCase();
+    if (!tag) { toast('Enter a tag to add'); return; }
+    runBulk((item) => (item.tags || []).includes(tag) ? null : { tags: [...(item.tags || []), tag] },
+      (n) => `Tagged ${n} item${n === 1 ? '' : 's'}`);
+  });
+  el('bulkDelete').addEventListener('click', () => {
+    const count = state.selected.size;
+    if (!count || !confirm(`Delete ${count} selected item${count === 1 ? '' : 's'}?`)) return;
+    runBulk((item, now) => ({ deletedAt: now }),
+      (n) => `Deleted ${n} item${n === 1 ? '' : 's'}`);
   });
 }
 

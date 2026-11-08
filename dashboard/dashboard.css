@@ -255,6 +255,31 @@ body {
   box-shadow: var(--glow);
 }
 .card.dragging { opacity: 0.45; transform: scale(0.985) rotate(0.6deg); }
+.card.selectable { cursor: pointer; }
+.card.selectable.selected {
+  border-color: var(--brand1);
+  box-shadow: 0 0 0 2px var(--brand-line), var(--glow);
+}
+.card.selectable:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 3px; }
+.select-mark {
+  position: absolute; z-index: 2; right: 10px; top: 10px;
+  width: 24px; height: 24px; border: 2px solid #fff;
+  border-radius: 7px; background: rgba(8, 11, 24, 0.75);
+  color: #fff; font-size: 16px; font-weight: 700;
+  display: grid; place-items: center;
+}
+.card.selected .select-mark { background: var(--brand1); }
+
+.bulk-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 10px; margin: 0 0 14px; border-radius: 12px;
+  border: 1px solid var(--brand-line);
+  background: linear-gradient(120deg, rgba(124, 108, 255, 0.18), rgba(15, 19, 40, 0.9));
+}
+.bulk-bar strong { color: var(--brand-ink); font-size: 12px; min-width: 70px; }
+.bulk-bar .btn { padding: 7px 10px; font-size: 12px; }
+.bulk-bar .input { width: auto; min-width: 130px; max-width: 190px; padding: 7px 9px; font-size: 12px; }
+.bulk-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* each thumb gets its own subtle aurora tint behind the image */
 .thumb { display: block; position: relative; background: rgba(8, 10, 24, 0.5); }
