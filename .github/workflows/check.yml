@@ -1,0 +1,40 @@
+name: check & pack
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax-check all JS
+        shell: pwsh
+        run: |
+          $bad = @()
+          Get-ChildItem -Recurse -Include *.js -Exclude *.min.js | ForEach-Object {
+            node --check $_.FullName 2>$null
+            if ($LASTEXITCODE -ne 0) { $bad += $_.FullName }
+          }
+          if ($bad) { $bad | ForEach-Object { Write-Error "syntax: $_" }; exit 1 }
+
+      - name: Validate manifest
+        shell: pwsh
+        run: |
+          $m = Get-Content manifest.json -Raw | ConvertFrom-Json
+          if (-not $m.manifest_version -eq 3) { Write-Error 'not MV3'; exit 1 }
+          foreach ($icon in @('16','32','48','128')) {
+            if (!(Test-Path ("icons\icon$icon.png"))) { Write-Error "missing icon$icon"; exit 1 }
+          }
+
+      - name: Build store zip
+        shell: pwsh
+        run: ./tools/pack.ps1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-zip
+          path: LinkClipper-*.zip

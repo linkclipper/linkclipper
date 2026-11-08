@@ -1,0 +1,18 @@
+name: Feature or idea
+description: Suggest a capability (see docs/ROADMAP.md for planned phases)
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: want
+    attributes:
+      label: What do you want to add?
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Which roadmap phase does it fit?
+      options:
+        - Phase A - foundation
+        - Phase B - sharing
+        - Phase C - discovery
+        - Phase D - Pinterest moment
+        - Not sure

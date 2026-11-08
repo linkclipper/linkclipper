@@ -1,115 +1,46 @@
 # LinkClipper
 
-> A collection center for the web you browse — YouTube Shorts, Instagram reels,
-> videos, articles and pages — organized into boards, tagged, searchable,
-> and synced across devices.
+**Save the web you love. Find it again, in one place.**
 
-Think Pinterest, but for everything you want to revisit.
+LinkClipper is a local-first Chrome/Brave extension (MV3) that clips anything you browse — YouTube Shorts, reels, articles, pages — into boards you can tag, search, and revisit. In-page save buttons live right next to the videos you're watching; articles open as clean readable text *inside* your dashboard.
 
-## Features
+![badge](https://img.shields.io/badge/manifest-MV3-7b6cff) ![badge](https://img.shields.io/badge/license-MIT-green) ![badge](https://img.shields.io/badge/data-local--first-blueviolet)
 
-- **Save from inside the page** — YouTube (watch action bar, Shorts rail, and a small
-  W badge on every video thumbnail in lists), Instagram reels/posts, X (Twitter)
-  posts, Reddit posts and TikTok get an in-page LinkClipper button. Clicking it
-  opens a quick-save dialog on the page itself (board picker with inline "new
-  board", tags with autocomplete, note) just like the toolbar popup. Already-saved
-  items show a green checkmark and open in edit mode.
-- **Preview without leaving** — YouTube, Instagram and TikTok items play inside
-  the dashboard via official embeds: hover a card and click ▶, or "Load preview"
-  in the edit modal. If YouTube shows its "Error 153" player refusal, hit
-  **↻ Alternate player**; sites that block embedding fall back to an
-  open-original link.
-- **Organize fast** — hover a card for action buttons (open ↗, move ⇄, delete 🗑),
-  use the move popover, or simply **drag a card onto a board in the sidebar**.
-- **One-click save** — click the toolbar icon on any page. LinkClipper extracts
-  the title, thumbnail and description automatically and classifies the artifact:
-  - ⚡ **YouTube Short** · ▶ **Video** (YouTube/TikTok) · 🟪 **Reel** (Instagram/TikTok)
-  - ✉ **Article** (detected from page structure) · ⚙ **Page** (fallback)
-- **Boards** — organize items into boards (default `Inbox`, plus unlimited custom
-  boards with colors).
-- **Tags & notes** — add tags while saving (autocomplete from tags you already
-  use) and a "why save this" note.
-- **Pinterest-style dashboard** — masonry grid at `chrome-extension://<id>/dashboard/dashboard.html`
-  with search (`/` to focus), type filter, tag filter, board sidebar, sort, and an
-  edit modal per item.
-- **Duplicate awareness** — saving the same page again updates the existing item
-  instead of creating copies (tracking params like `utm_*`/`si` are stripped for matching).
-- **Local-first, optional cloud sync** — everything lives in `chrome.storage.local`.
-  Optionally connect a free **Supabase** project to sync boards + items across
-  devices (last-write-wins merge, deletes propagate via tombstones).
-- **Export / Import JSON** — full backup, no lock-in.
+<p>
+  <a href="https://linkclipper.github.io"><b>Website</b></a> ·
+  <a href="https://linkclipper.github.io/privacy.html"><b>Privacy</b></a> ·
+  <a href="docs/ROADMAP.md"><b>Roadmap</b></a> ·
+  <a href="docs/ARCHITECTURE.md"><b>Architecture</b></a> ·
+  <a href="CHANGELOG.md"><b>Changelog</b></a>
+</p>
 
-## Install (Load unpacked)
+![LinkClipper dashboard](https://linkclipper.github.io/assets/webstore-1-grid.png)
 
-1. Open `chrome://extensions`
-2. Enable **Developer mode** (top right)
-3. **Load unpacked** → select this folder
-4. Pin the **W** icon; browse around and click it to save
+## Highlights
 
-## Use the dashboard
+- **One-click save** — toolbar popup anywhere; in-page buttons on YouTube, Instagram, X/Twitter, Reddit, TikTok.
+- **Boards & tags** — Pinterest-style masonry, drag & drop, autocomplete, instant full-text search.
+- **Play in place** — IG/TikTok/Vimeo embed inline; YouTube opens a docked floating mini-player (vendor limitation, see docs).
+- **Read in place** — articles extract to a clean reading pane on first view and stay cached on the item.
+- **Local-first** — zero accounts, zero analytics. Optional sync goes only to *your own* Supabase project.
 
-Click **Open collection ↗** in the popup, or open the extension's
-`dashboard/dashboard.html` directly.
+## Where this is heading
 
-- Left sidebar: **All items** + your boards (click to filter; 🗑 to delete a board — items move to Inbox)
-- Top bar: search, type filter, tag filter, sort order
-- Click a card → edit title / board / tags / note, or delete
-- Click a **tag chip** on a card to filter by that tag
-- ☁ Sync / ↓ Export / ↑ Import live in the sidebar footer
+LinkClipper is growing toward shared, discoverable collections (Phase C/D of the [roadmap](docs/ROADMAP.md)) while keeping the local-first guarantee: the extension works fully offline, and every server-touching feature is opt-in. Engineering guardrails for that path — schema versioning, migration ladder, and board `visibility` — are already in `lib/store.js`.
 
-## Cloud sync setup (Supabase, ~3 minutes)
+## Contributing
 
-1. Create a free project: https://supabase.com → **New project**
-2. Open **SQL Editor → New query**, paste the contents of
-   [`supabase/schema.sql`](supabase/schema.sql), press **Run**
-3. In the extension dashboard, click **☁ Sync** and paste:
-   - **Project URL** — `https://xxxx.supabase.co` (Project Settings → API)
-   - **Anon public key** (Project Settings → API → `anon` key)
-4. **Test connection** → then **Sync now**
+Read [CONTRIBUTING.md](CONTRIBUTING.md). The law of the project: **if it breaks offline, it's a bug; if it requires an account, it's redesign.**
 
-Sync behavior:
-
-- Fully local until you configure it; after every popup save the extension
-  quietly syncs in the background (when configured).
-- Merge strategy: newest `updatedAt` wins per record. Deleting an item or board
-  tombstones it first, so the deletion reaches your other devices.
-- Repeat steps 2–4 on another computer's copy of the extension to share the collection.
-
-> ⚠️ With the anon key + open RLS policy used here, anyone holding your project's
-> anon key could read/write your tables. That's fine for a private personal
-> project (keys live in one browser). If you later want real accounts, add
-> Supabase Auth and user-scoped RLS policies.
-
-## Project layout
+## Repository layout
 
 ```
-manifest.json          MV3 manifest (permissions: activeTab, storage, scripting)
-background.js          service worker: badge count, install seeding, bg sync
-lib/shared.js          type detection, classification, helpers (WC.*)
-lib/store.js           chrome.storage.local CRUD, boards, tags, tombstones
-lib/supabase.js        REST sync (push/pull/LWW merge, no SDK)
-popup/                 save popup (extraction, board picker, tags, note)
-dashboard/             full-page masonry collection manager
-icons/                 generated PNGs
-tools/make-icons.ps1   regenerates the icons
-supabase/schema.sql    tables + RLS for the sync backend
+manifest.json    MV3 manifest (action, dashboard, override-less content scripts)
+background.js    service worker: badge, sync, article fetch/extract
+lib/             shared helpers, storage + migrations, supabase sync client
+popup/           quick-save popup
+dashboard/       full dashboard app (+ dev.html harness for offline dev)
+content/         in-page save overlay for supported sites
+tools/           pack.ps1 (store zip), icon generation
+docs/            architecture + roadmap
 ```
-
-## Notes & limits
-
-- Thumbnails for YouTube are derived from the video ID (`i.ytimg.com`), other
-  thumbnails come from the page's `og:image`. Some sites (e.g. Instagram) may
-  return no image unless you're logged in — the card falls back to a colored
-  placeholder.
-- Chrome-internal pages (`chrome://`, Web Store, PDFs) can't be saved — the
-  popup tells you instead of failing silently.
-- Import/export are full JSON snapshots; importing merges by record and keeps
-  the newer version of each.
-
-## Roadmap ideas
-
-- Context-menu save (links, images, selected text) and `Alt+Shift+S` shortcut
-- Board cover collage images, drag & drop between boards
-- Read-later queue, "resurface on a rainy day" shuffle
-- Real Supabase Auth + multi-device profiles
-- Markdown / PDF export of collections
