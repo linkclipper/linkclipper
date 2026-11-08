@@ -146,6 +146,16 @@ body {
 .board-row { display: flex; gap: 8px; }
 .board-row.hidden { display: none; }
 #boardSelect { cursor: pointer; }
+.shortcut-hint { margin-top: 6px; color: var(--sub); font-size: 10.5px; }
+.shortcut-hint kbd {
+  display: inline-block;
+  padding: 1px 4px;
+  border: 1px solid var(--stroke);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--brand-ink);
+  font: inherit;
+}
 
 .color-row { display: flex; gap: 5px; align-items: center; margin-top: 8px; }
 .color-dot {
@@ -204,6 +214,7 @@ textarea.input { resize: vertical; min-height: 44px; }
 }
 .save-btn:hover { filter: brightness(1.12); }
 .save-btn:active { transform: scale(0.97); }
+.save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .done-check {
   width: 52px; height: 52px;

@@ -42,7 +42,8 @@ async function init() {
   renderPreview();
 
   show('saveView');
-  el('tagInput').focus({ preventScroll: true });
+  el('saveBtn').disabled = false;
+  el('boardSelect').focus({ preventScroll: true });
 }
 
 function isRestricted(url) {
@@ -176,6 +177,8 @@ async function renderBoards() {
   const savedBoard = state.existing && state.boards.find((b) => b.id === state.existing.boardId);
   state.item.boardId = savedBoard ? savedBoard.id : (last ? last.id : (state.boards[0] && state.boards[0].id) || 'inbox');
   sel.value = state.item.boardId;
+  el('newBoardRow').classList.add('hidden');
+  el('newBoardName').setCustomValidity('');
 }
 
 el('boardSelect').addEventListener('change', () => {
@@ -211,6 +214,7 @@ el('boardSelect').addEventListener('change', () => {
 el('newBoardName').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') e.preventDefault();
 });
+el('newBoardName').addEventListener('input', () => el('newBoardName').setCustomValidity(''));
 
 // ------------------------------------------------------------------- tags
 
@@ -315,10 +319,17 @@ async function save() {
   // A "new board" may have been typed without pressing anywhere else.
   if (el('boardSelect').value === '__new__' || el('newBoardRow').classList.contains('hidden') === false) {
     const name = el('newBoardName').value.trim();
-    if (name) {
-      const b = await createNewBoard(name);
-      state.item.boardId = b.id;
+    if (!name) {
+      const input = el('newBoardName');
+      input.setCustomValidity('Give your new board a name');
+      input.reportValidity();
+      input.focus();
+      btn.disabled = false;
+      btn.style.filter = '';
+      return;
     }
+    const b = await createNewBoard(name);
+    state.item.boardId = b.id;
   }
 
   const patch = Object.assign({}, state.item, { title: state.item.title });
@@ -358,6 +369,12 @@ function trySyncQuietly() {
 
 el('noteInput').addEventListener('input', () => { state.item.note = el('noteInput').value; });
 el('saveBtn').addEventListener('click', save);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+  if (!state.item || el('saveView').classList.contains('hidden') || el('saveBtn').disabled) return;
+  e.preventDefault();
+  save(); // Same explicit save path as clicking the button; never saves on popup open.
+});
 el('duplicateNewBtn').addEventListener('click', () => {
   state.forceNew = true;
   el('saveBtn').textContent = 'Save another copy';

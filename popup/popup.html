@@ -27,6 +27,7 @@
       <div class="board-row">
         <select id="boardSelect" class="input"></select>
       </div>
+      <p class="shortcut-hint">Choose a board, then press <kbd>Ctrl / ⌘</kbd> + <kbd>Enter</kbd> to save.</p>
       <div id="newBoardRow" class="board-row hidden">
         <input id="newBoardName" class="input" placeholder="New board name&hellip;" />
         <div id="newBoardColors" class="color-row"></div>
@@ -44,7 +45,7 @@
 
       <div id="duplicateNotice" class="notice hidden"></div>
 
-      <button id="saveBtn" class="save-btn">Save to collection</button>
+      <button id="saveBtn" class="save-btn" disabled>Save to collection</button>
       <button id="duplicateNewBtn" class="link-btn hidden" type="button">Save another copy instead</button>
     </div>
 

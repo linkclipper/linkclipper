@@ -2,6 +2,10 @@
 
 ## 0.4.0 — share links (Phase B, v1)
 
+- **Faster capture:** Alt+Shift+L opens the existing quick-save popup. The board
+  picker takes focus, and Ctrl+Enter (⌘+Enter on Mac) explicitly saves. The
+  browser's extension-shortcut settings can reassign a conflicting key; opening
+  the popup never saves on its own.
 - **Bulk actions** in the dashboard: select cards (or all visible cards), move
   them to a board, add a tag, or delete with a confirmation. Selection stays
   within the current filtered view; each operation writes once to local storage

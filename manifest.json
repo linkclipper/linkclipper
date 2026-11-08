@@ -16,6 +16,14 @@
       "128": "icons/icon128.png"
     }
   },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "Open LinkClipper quick save"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },
