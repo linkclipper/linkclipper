@@ -2,6 +2,8 @@
 
 ## 0.4.0 — share links (Phase B, v1)
 
+- Cards now have **Copy original link** beside Open, with a clipboard fallback
+  for browsers where the async Clipboard API is unavailable.
 - Fixed the Share entry point: selecting any board now shows an explicit
   **Share board** button; each sidebar board also has Share and Edit controls.
   The existing-board editor was previously unreachable from the UI.

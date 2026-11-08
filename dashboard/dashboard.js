@@ -290,6 +290,7 @@ function cardHtml(i) {
         <div class="card-acts">
           ${emb ? `<button class="cact pv" data-prev="${esc(i.id)}" title="Watch / read here">&#9654;</button>` : ''}
           <a class="cact op" href="${esc(i.url)}" target="_blank" rel="noreferrer" title="Open original">&#8599;</a>
+          <button class="cact cp" data-act="copy" type="button" title="Copy original link" aria-label="Copy original link">&#10697;</button>
           <button class="cact mv" data-act="move" title="Move to another board">&#8620;</button>
           <button class="cact del" data-act="del" title="Delete">&#128465;</button>
         </div>
@@ -386,13 +387,17 @@ function bindContent() {
     });
   });
 
-  // hover action row: move / delete
+  // card actions: copy / move / delete
   el('content').querySelectorAll('[data-act]').forEach((b) => {
-    b.addEventListener('click', (e) => {
+    b.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
       const id = b.closest('.card').getAttribute('data-id');
-      if (b.getAttribute('data-act') === 'del') {
+      const action = b.getAttribute('data-act');
+      if (action === 'copy') {
+        const item = state.items.find((x) => x.id === id);
+        if (item && item.url) toast(await copyItemUrl(item.url) ? 'Link copied ✓' : 'Could not copy link');
+      } else if (action === 'del') {
         if (confirm('Delete this item?')) {
           Store.deleteItem(id).then(() => { toast('Deleted'); trySyncQuiet(); refresh(); });
         }
@@ -412,6 +417,20 @@ function bindContent() {
     });
     card.addEventListener('dragend', () => card.classList.remove('dragging'));
   });
+}
+
+async function copyItemUrl(url) {
+  if (await copyText(url)) return true;
+  // Clipboard API may be unavailable in some extension/browser contexts.
+  const field = document.createElement('textarea');
+  field.value = url;
+  field.style.cssText = 'position:fixed;left:-9999px;top:0';
+  document.body.appendChild(field);
+  field.select();
+  let copied = false;
+  try { copied = document.execCommand('copy'); } catch (e) { /* no clipboard access */ }
+  field.remove();
+  return copied;
 }
 
 // Move via popover menu anchored to a card button.

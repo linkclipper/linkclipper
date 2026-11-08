@@ -356,11 +356,13 @@ body {
 
 .cact.pv { background: rgba(16, 185, 129, 0.14); color: #34d399; }   /* preview  */
 .cact.op { background: rgba(59, 130, 246, 0.14); color: #7cb0ff; }   /* open     */
+.cact.cp { background: rgba(124, 108, 255, 0.14); color: var(--brand-ink); } /* copy */
 .cact.mv { background: var(--brand-tint); color: var(--brand-ink); } /* move     */
 .cact.del { background: rgba(239, 68, 68, 0.14); color: #fb7185; }   /* delete   */
 
 .cact.pv:hover { background: #10b981; color: #06281d; }
 .cact.op:hover { background: #3b82f6; color: #061631; }
+.cact.cp:hover { background: var(--brand1); color: #fff; }
 .cact.mv:hover { background: linear-gradient(135deg, var(--brand1), var(--brand2)); color: #fff; }
 .cact.del:hover { background: #ef4444; color: #2b0606; }
 .board-item.drop-hi { outline: 2px dashed var(--brand-line); outline-offset: -2px; background: rgba(124, 108, 255, 0.18); }
