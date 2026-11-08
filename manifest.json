@@ -1,7 +1,7 @@
 ﻿{
   "manifest_version": 3,
   "name": "LinkClipper",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Collect the web you want to revisit - shorts, reels, videos, articles and pages - into boards you can tag, search and sync.",
   "minimum_chrome_version": "102",
   "permissions": ["activeTab", "storage", "scripting"],

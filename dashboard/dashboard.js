@@ -744,7 +744,8 @@ function renderBoardModal(existing) {
       <span class="spacer"></span>
       <button id="mCancel" class="btn">Close</button>
       <button id="mBoardSave" class="btn primary">${b ? 'Rename' : 'Create'}</button>
-    </div>`;
+    </div>
+    ${b ? `<div class="row" style="margin-top:6px"><button id="mShare" class="btn">Share this board…</button></div>` : ''}`;
 
   el('modalBack').classList.remove('hidden');
   let color = b ? b.color : WC.BOARD_COLORS[(state.boards.length + 1) % WC.BOARD_COLORS.length];
@@ -764,6 +765,7 @@ function renderBoardModal(existing) {
   paintColors();
 
   el('mCancel').addEventListener('click', closeModal);
+  if (b) el('mShare').addEventListener('click', () => openShareModal(b));
   el('mBoardSave').addEventListener('click', async () => {
     const name = el('mName').value.trim();
     if (!name) { toast('Give the board a name'); return; }
@@ -774,6 +776,80 @@ function renderBoardModal(existing) {
     await refresh();
   });
   el('mName').focus();
+}
+
+// -------------------------------------------------------------------- share
+
+// Phase B v1: the board travels inside the link itself (self-contained
+// snapshot). No server, no keys. Static by design; live/revocable sharing
+// comes with Phase B2 via the user's sync project.
+
+function openShareModal(board) {
+  try {
+    renderShareModal(board);
+  } catch (err) {
+    console.error('LinkClipper: share modal failed', err);
+    closeModal();
+    toast('Could not open the share panel');
+  }
+}
+
+function renderShareModal(board) {
+  const items = state.items.filter((i) => i.boardId === board.id);
+  const payload = Shares.buildPayload(board, items);
+  const tooBig = !Shares.fits(payload);
+  const url = Shares.url(payload);
+
+  el('modal').innerHTML = `
+    <h2>Share “${esc(board.name)}”</h2>
+    <div class="sync-hint">
+      Anyone with this link sees a <b>snapshot</b> of this board — titles, links,
+      thumbnails (${items.length} item${items.length === 1 ? '' : 's'}).
+      Your notes are <b>not</b> shared. The board lives inside the link itself,
+      so people who already have the link keep seeing it even if you change
+      your mind later — re-share to refresh the snapshot.
+    </div>
+    <label class="field-label">Share link</label>
+    <input id="shUrl" class="input share-link" readonly value="${esc(url)}" ${tooBig ? 'aria-disabled="true"' : ''} />
+    ${tooBig ? `<div class="sync-hint" style="color:#fb7185">This board is too large for one link (~${items.length} items). Move keepers to a fresh board and share that — or wait for live sharing (v0.5).</div>` : ''}
+    <div class="row">
+      <button id="shCopy" class="btn primary" ${tooBig ? 'disabled' : ''}>Copy link</button>
+      <button id="shOpen" class="btn" ${tooBig ? 'disabled' : ''}>Preview</button>
+      <span class="spacer"></span>
+      <button id="shClose" class="btn">Close</button>
+    </div>
+    <div id="shLog" class="sync-log"></div>`;
+
+  el('modalBack').classList.remove('hidden');
+
+  el('shClose').addEventListener('click', closeModal);
+  el('shOpen').addEventListener('click', () => {
+    window.open(url, '_blank', 'noopener');
+  });
+  el('shCopy').addEventListener('click', async () => {
+    const ok = await copyText(url);
+    if (ok) { toast('Share link copied ✓'); return; }
+    const box = el('shUrl');
+    box.focus(); box.select();
+    const legacy = document.execCommand && document.execCommand('copy');
+    if (legacy) { toast('Share link copied ✓'); return; }
+    el('shLog').textContent = 'Copying failed — the link is selected; press Ctrl+C.';
+  });
+
+  // Stamp the share shape on the board: visibility flips to 'link' once so
+  // Phase B2 (live boards) can key shares off shareId. No network involved.
+  if (board.visibility !== 'link' || !board.shareId) {
+    Store.saveBoard({ id: board.id, visibility: 'link', shareId: (board.shareId || WC.uid()) });
+  }
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 // -------------------------------------------------------------------- sync

@@ -597,6 +597,14 @@ textarea.input { resize: vertical; min-height: 70px; }
   overflow-y: auto;
 }
 
+/* share link box (Phase B) */
+.share-link {
+  font-size: 11.5px;
+  color: var(--brand-ink);
+  overflow-wrap: anywhere;
+  cursor: copy;
+}
+
 /* move-to-board popover */
 .wc-move-menu {
   position: fixed;

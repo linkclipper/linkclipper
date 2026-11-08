@@ -14,11 +14,14 @@ LinkClipper is being built deliberately: each phase ships standalone value and l
 
 ## Phase B — Sharing (v0.4)
 
-- ⬜ `visibility: 'link'` boards with share slug (`board.shareId`)
-- ⬜ Read-only public board page served from the user's own Supabase project
-- ⬜ Share button → `linkclipper.github.io/b/<slug>`
-- ⬜ Item sanitization on share: strip `readerText` cache unless author opts in
-- **Decision needed:** Supabase RLS policies for anon-read of shared boards (drafted in `supabase/schema.sql` follow-up)
+- ✅ `visibility: 'link'` boards with `shareId` (schema v2 migration)
+- ✅ Share links **v1 — self-contained snapshots**: board travels in the URL
+  fragment; public read-only viewer at `linkclipper.github.io/b/` (zero infra,
+  works without sync; transport decision recorded in `Knowledgebase/design/social-backend.md`)
+- ⬜ B2: live boards read from the user's own Supabase (Phase A anon-key write
+  risk must be resolved first — see `backend/README.md`)
+- ⬜ Item sanitization on share: ✅ done for v1 (notes/readerText excluded by the codec)
+- **Decision needed:** Phase B2 transport (anon-key model vs hosted slug lookup)
 
 ## Phase C — Discovery foundation (v0.5)
 

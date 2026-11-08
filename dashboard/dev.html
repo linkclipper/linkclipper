@@ -99,6 +99,7 @@
   </script>
   <script src="../lib/shared.js"></script>
   <script src="../lib/store.js"></script>
+  <script src="../lib/shares.js"></script>
   <script src="../lib/supabase.js"></script>
   <script src="dashboard.js"></script>
   <script>
@@ -113,6 +114,10 @@
       else if (st === 'empty') { state.items = []; renderContent(); }
       else if (st === 'reader') openItemModal('i-art', { preview: true });
       else if (st === 'vitem') openItemModal('i-vim', { preview: true });
+      else if (st === 'share') {
+        const b = state.boards.find((x) => x.id === 'inbox') || state.boards[0];
+        openShareModal(b);
+      }
       document.documentElement.setAttribute('data-devstate', st);
     }, 300);
   </script>

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.4.0 — share links (Phase B, v1)
+
+- **Board share links**: any board can be shared via a link that carries a
+  read-only **snapshot** inside the URL fragment (`linkclipper.github.io/b/#d=…`).
+  - No server, no keys, no sync required — works for anyone, recipient needs no
+    account or extension (they get a "Get LinkClipper" call to action).
+  - Privacy model: titles, links, thumbnails, tags, source + board name/color are
+    shared; **notes, reader-text caches and selections are never shared**.
+  - Snapshots are static by design — re-share to refresh. (Live, revocable
+    boards via the user's own sync project = Phase B2.)
+  - The public viewer escapes everything it renders; links are opened with
+    `noopener noreferrer`; thumbnails load with `no-referrer` and fall back
+    silently when dead.
+- Board editor gains "Share this board…" (boards flip to `visibility: 'link'`
+  and receive a `shareId` — the shape Phase B2 keys off).
+- Schema: migration ladder stepped to **v2** (existing boards stamped to the
+  share shape; idempotent, runs in place).
+- Share codec is a standalone lib (`lib/shares.js`), mirrored decode-side on the
+  public page; corrupt/truncated/garbage hash text is rejected, never thrown.
+
 ## 0.3.0 — the reading view release (2026-11-08)
 
 - Fixed a shipped-since-glassmorphism bug: a missing `.hidden` rule left an empty glass pill and a dark scrim covering the dashboard permanently.
