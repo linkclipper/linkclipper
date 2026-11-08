@@ -126,8 +126,17 @@ body {
 .board-item .board-action:hover, .board-item .board-action:focus-visible { color: var(--brand-ink); }
 .board-item .board-del:hover { color: #fb7185; }
 
-.board-toolbar { display: flex; align-items: center; gap: 8px; }
-.board-toolbar .btn { padding: 6px 10px; font-size: 12px; }
+.board-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 0 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--stroke);
+}
+.board-toolbar.bulk-active { margin-bottom: 10px; }
+.board-toolbar .btn { padding: 7px 12px; font-size: 12px; }
 
 .ghost-btn {
   padding: 10px;

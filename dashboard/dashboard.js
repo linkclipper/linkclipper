@@ -327,7 +327,7 @@ function renderContent() {
 
   el('content').innerHTML =
     chipRow +
-    `<div class="count-line board-toolbar"><span>${items.length} item${items.length === 1 ? '' : 's'}</span>
+    `<div class="count-line board-toolbar ${state.bulkMode ? 'bulk-active' : ''}"><span>${items.length} item${items.length === 1 ? '' : 's'}</span>
       <span class="spacer"></span>
       ${selectedBoard && !state.bulkMode ? `<button id="editSelectedBoard" class="btn">Edit board</button><button id="shareSelectedBoard" class="btn primary">Share board</button>` : ''}
       ${items.length && !state.bulkMode ? '<button id="bulkStart" class="btn">Select items</button>' : ''}
