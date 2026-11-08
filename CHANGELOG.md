@@ -2,6 +2,10 @@
 
 ## 0.4.0 — share links (Phase B, v1)
 
+- **Command palette:** dashboard actions and board navigation in a searchable,
+  keyboard-navigable overlay (Ctrl/⌘+Shift+P by default). The palette key is
+  configurable locally via presets or a recorded combination. Settings show
+  the browser-wide capture key and link to Chrome/Brave's shortcut manager.
 - **Faster capture:** Alt+Shift+L opens the existing quick-save popup. The board
   picker takes focus, and Ctrl+Enter (⌘+Enter on Mac) explicitly saves. The
   browser's extension-shortcut settings can reassign a conflicting key; opening

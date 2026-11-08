@@ -205,6 +205,19 @@ body {
   box-shadow: 0 0 0 3px rgba(124, 108, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+.commands-trigger {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border: 1px solid var(--stroke);
+  border-radius: 11px; background: var(--brand-tint);
+  color: var(--brand-ink); font: inherit; font-size: 12px;
+  font-weight: 650; cursor: pointer; white-space: nowrap;
+}
+.commands-trigger:hover, .commands-trigger:focus-visible { border-color: var(--brand-line); color: #fff; }
+.commands-trigger kbd {
+  padding: 2px 5px; border: 1px solid var(--stroke);
+  border-radius: 5px; font: inherit; font-size: 10px; color: var(--sub);
+}
+
 .filters { display: flex; gap: 8px; }
 
 .filter-select {
@@ -432,6 +445,49 @@ body {
 }
 
 .modal h2 { font-size: 15px; margin-bottom: 12px; }
+
+/* ========================================================== command palette */
+.palette-back {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; justify-content: center; align-items: flex-start;
+  padding: min(15vh, 120px) 16px 16px;
+  background: rgba(5, 7, 18, 0.8);
+}
+.palette {
+  width: min(580px, 100%); max-height: min(620px, 80vh);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: linear-gradient(165deg, rgba(31, 35, 68, 0.99), rgba(17, 20, 42, 0.98));
+  border: 1px solid var(--stroke-hi); border-radius: 18px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.65), var(--glow);
+}
+.palette-query {
+  width: 100%; padding: 17px 20px; border: 0; border-bottom: 1px solid var(--stroke);
+  background: transparent; color: var(--ink); font: inherit; font-size: 16px; outline: none;
+}
+.palette-query::placeholder { color: var(--sub); }
+.palette-list { overflow-y: auto; padding: 8px; min-height: 80px; }
+.palette-option {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px; border: 1px solid transparent; border-radius: 10px;
+  background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.palette-option:hover, .palette-option.active {
+  background: var(--brand-tint); border-color: var(--brand-line);
+}
+.palette-option .palette-icon {
+  width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--brand-tint); color: var(--brand-ink); flex-shrink: 0;
+}
+.palette-option .palette-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-option .palette-kind { color: var(--sub); font-size: 11px; }
+.palette-empty { padding: 24px 14px; text-align: center; color: var(--sub); }
+.palette-foot { padding: 9px 16px; border-top: 1px solid var(--stroke); color: var(--sub); font-size: 11px; }
+.palette-foot span { margin-left: 14px; }
+.shortcut-help { margin: 6px 0 15px; color: var(--sub); font-size: 12px; line-height: 1.55; }
+.shortcut-help code { color: var(--brand-ink); overflow-wrap: anywhere; }
+.row.shortcut-record-row { margin-top: 9px; align-items: center; }
+.shortcut-record-row .shortcut-help { margin: 0; }
+.shortcut-record-row .btn:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 2px; }
 
 .modal .hero {
   height: 150px;

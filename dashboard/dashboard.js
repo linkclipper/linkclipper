@@ -9,6 +9,9 @@ const state = {
   filters: { board: '', q: '', type: '', tag: '', sort: 'new' },
   bulkMode: false,
   selected: new Set(),
+  paletteOpen: false,
+  paletteIndex: 0,
+  paletteMatches: [],
 };
 
 init();
@@ -40,7 +43,14 @@ async function init() {
     if (e.key === 'Escape') { e.currentTarget.value = ''; state.filters.q = ''; renderContent(); }
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+    const paletteKey = state.settings && state.settings.paletteShortcut;
+    if (Shortcuts.matches(e, Shortcuts.valid(paletteKey) ? paletteKey : Shortcuts.DEFAULT)) {
+      e.preventDefault();
+      if (!state.paletteOpen) openCommandPalette();
+      return;
+    }
+    if (e.key === '/' && !state.paletteOpen && el('modalBack').classList.contains('hidden') &&
+        !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
       e.preventDefault();
       el('search').focus();
     }
@@ -51,12 +61,33 @@ async function init() {
   el('exportBtn').addEventListener('click', exportJson);
   el('importBtn').addEventListener('click', () => el('importFile').click());
   el('importFile').addEventListener('change', importJson);
+  el('commandsBtn').addEventListener('click', openCommandPalette);
+  el('paletteBack').addEventListener('click', (e) => {
+    if (e.target === el('paletteBack')) closeCommandPalette();
+  });
+  el('paletteQuery').addEventListener('input', () => { state.paletteIndex = 0; renderCommandPalette(); });
+  el('paletteQuery').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeCommandPalette(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const n = state.paletteMatches.length;
+      if (n) state.paletteIndex = (state.paletteIndex + (e.key === 'ArrowDown' ? 1 : n - 1)) % n;
+      renderCommandPalette();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const command = state.paletteMatches[state.paletteIndex];
+      if (command) runPaletteCommand(command);
+    }
+  });
 
   el('modalBack').addEventListener('click', (e) => {
     if (e.target === el('modalBack')) closeModal();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+      if (state.paletteOpen) closeCommandPalette();
+      else closeModal();
+    }
   });
 
   // Deep link from in-page buttons / toast: dashboard.html?item=<id>
@@ -98,8 +129,193 @@ async function refresh(opts) {
   renderBoards();
   renderContent();
   renderSyncStatusShort();
+  updatePaletteKeyHint();
 
   if (opts && opts.markClean) await Store.saveSettings({ cleanSyncAt: state.settings.lastSyncAt });
+}
+
+// ------------------------------------------------------- command palette
+
+function updatePaletteKeyHint() {
+  const value = Shortcuts.valid(state.settings && state.settings.paletteShortcut)
+    ? state.settings.paletteShortcut : Shortcuts.DEFAULT;
+  const mac = /Mac/.test(navigator.platform || '');
+  el('commandsBtn').querySelector('kbd').textContent = value === 'Off' ? 'Click' :
+    Shortcuts.label(value).replace('Ctrl/⌘', mac ? '⌘' : 'Ctrl').replace(/ \+ /g, '+');
+}
+
+function paletteCommands() {
+  const commands = [
+    { title: 'Search items', kind: 'Navigate', icon: '⌕', keywords: 'find filter', run: () => el('search').focus() },
+    { title: 'Show all items', kind: 'Navigate', icon: '▦', keywords: 'clear filters', run: () => {
+      state.filters = { board: '', q: '', type: '', tag: '', sort: state.filters.sort };
+      el('search').value = '';
+      el('typeFilter').value = '';
+      el('tagFilter').value = '';
+      renderBoards(); renderContent();
+    } },
+    { title: 'New board', kind: 'Create', icon: '+', keywords: 'collection', run: () => openBoardModal(null) },
+    { title: state.bulkMode ? 'Done selecting items' : 'Select items', kind: 'Organize', icon: '✓', keywords: 'bulk move tag delete', run: () => {
+      state.bulkMode = !state.bulkMode;
+      state.selected.clear();
+      renderContent();
+    } },
+    { title: 'Cloud sync', kind: 'Settings', icon: '☁', keywords: 'supabase', run: openSyncModal },
+    { title: 'Export collection', kind: 'Data', icon: '↓', keywords: 'backup json', run: exportJson },
+    { title: 'Import collection', kind: 'Data', icon: '↑', keywords: 'restore json', run: () => el('importFile').click() },
+    { title: 'Keyboard shortcuts', kind: 'Settings', icon: '⌨', keywords: 'hotkeys customize capture command palette', run: openShortcutSettings },
+  ];
+  const board = boardById(state.filters.board);
+  if (board) commands.splice(3, 0,
+    { title: `Share ${board.name}`, kind: 'Board', icon: '↗', keywords: 'link snapshot', run: () => openShareModal(board) },
+    { title: `Edit ${board.name}`, kind: 'Board', icon: '✎', keywords: 'rename color', run: () => openBoardModal(board) });
+  for (const b of state.boards.filter((entry) => !entry.deletedAt)) {
+    commands.push({ title: `Go to ${b.name}`, kind: 'Board', icon: '▣', keywords: 'switch collection', run: () => {
+      state.filters.board = b.id;
+      renderBoards(); renderContent();
+    } });
+  }
+  return commands;
+}
+
+function openCommandPalette() {
+  if (state.paletteOpen || !el('modalBack').classList.contains('hidden')) return;
+  state.paletteFocus = document.activeElement;
+  state.paletteOpen = true;
+  state.paletteIndex = 0;
+  el('paletteQuery').value = '';
+  el('paletteBack').classList.remove('hidden');
+  renderCommandPalette();
+  el('paletteQuery').focus();
+}
+
+function closeCommandPalette() {
+  if (!state.paletteOpen) return;
+  state.paletteOpen = false;
+  el('paletteBack').classList.add('hidden');
+  if (state.paletteFocus && state.paletteFocus.isConnected) state.paletteFocus.focus();
+  state.paletteFocus = null;
+}
+
+function renderCommandPalette() {
+  const words = el('paletteQuery').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  state.paletteMatches = paletteCommands().filter((command) => {
+    const haystack = `${command.title} ${command.kind} ${command.keywords}`.toLowerCase();
+    return words.every((word) => haystack.includes(word));
+  });
+  if (state.paletteIndex >= state.paletteMatches.length) state.paletteIndex = 0;
+  el('paletteList').innerHTML = state.paletteMatches.length
+    ? state.paletteMatches.map((command, index) => `<button type="button"
+        class="palette-option ${index === state.paletteIndex ? 'active' : ''}"
+        role="option" aria-selected="${index === state.paletteIndex}" data-index="${index}">
+        <span class="palette-icon">${esc(command.icon)}</span>
+        <span class="palette-name">${esc(command.title)}</span>
+        <span class="palette-kind">${esc(command.kind)}</span>
+      </button>`).join('')
+    : '<div class="palette-empty">No matching commands</div>';
+  el('paletteList').querySelectorAll('[data-index]').forEach((button) => {
+    button.addEventListener('mouseenter', () => {
+      state.paletteIndex = Number(button.dataset.index);
+      el('paletteList').querySelectorAll('.palette-option').forEach((option) => {
+        option.classList.toggle('active', option === button);
+        option.setAttribute('aria-selected', String(option === button));
+      });
+    });
+    button.addEventListener('click', () => runPaletteCommand(state.paletteMatches[Number(button.dataset.index)]));
+  });
+  const active = el('paletteList').querySelector('.palette-option.active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+function runPaletteCommand(command) {
+  if (!command) return;
+  closeCommandPalette();
+  command.run();
+}
+
+function openShortcutSettings() {
+  const current = Shortcuts.valid(state.settings && state.settings.paletteShortcut)
+    ? state.settings.paletteShortcut : Shortcuts.DEFAULT;
+  const customOption = Shortcuts.OPTIONS.some((option) => option.value === current) ? '' :
+    `<option value="${esc(current)}">Custom: ${esc(Shortcuts.label(current))}</option>`;
+  el('modal').innerHTML = `
+    <h2>Keyboard shortcuts</h2>
+    <label class="field-label" for="paletteShortcut">Command palette (dashboard only)</label>
+    <select id="paletteShortcut" class="input">${Shortcuts.OPTIONS.map((option) =>
+      `<option value="${esc(option.value)}">${esc(option.label)}</option>`).join('')}${customOption}</select>
+    <div class="row shortcut-record-row"><button id="recordPaletteKey" class="btn" type="button">Record shortcut</button>
+      <span id="recordHint" class="shortcut-help">Choose a preset or record your own.</span></div>
+    <p class="shortcut-help">Requires Ctrl/⌘ or Alt plus a letter or number; Shift is optional. Browser shortcuts may take priority. The Commands button always works.</p>
+    <label class="field-label">Quick save (browser-wide)</label>
+    <p class="shortcut-help">Current assignment: <b id="captureShortcut">Checking…</b><br />
+      Chrome/Brave manages this key, not LinkClipper. Set it at <code>chrome://extensions/shortcuts</code>.</p>
+    <div class="row">
+      <button id="openBrowserShortcuts" class="btn">Open browser shortcut settings</button>
+      <span class="spacer"></span>
+      <button id="closeShortcuts" class="btn">Close</button>
+      <button id="saveShortcuts" class="btn primary">Save</button>
+    </div>`;
+  el('modalBack').classList.remove('hidden');
+  el('paletteShortcut').value = current;
+  const recorder = el('recordPaletteKey');
+  let recording = false;
+  recorder.addEventListener('click', () => {
+    recording = true;
+    el('recordHint').textContent = 'Press your shortcut now · Esc to cancel';
+    recorder.focus();
+  });
+  recorder.addEventListener('keydown', (e) => {
+    if (!recording) return;
+    if (e.key === 'Escape') {
+      e.preventDefault(); e.stopPropagation();
+      recording = false;
+      el('recordHint').textContent = 'Recording cancelled.';
+      el('paletteShortcut').focus();
+      return;
+    }
+    e.preventDefault(); e.stopPropagation();
+    const value = Shortcuts.fromEvent(e);
+    if (!value) { el('recordHint').textContent = 'Use Ctrl/⌘ or Alt + a letter/number (Shift optional).'; return; }
+    const select = el('paletteShortcut');
+    if (![...select.options].some((option) => option.value === value)) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = 'Custom: ' + Shortcuts.label(value);
+      select.appendChild(option);
+    }
+    select.value = value;
+    recording = false;
+    el('recordHint').textContent = 'Recorded ' + Shortcuts.label(value) + ' — click Save to apply.';
+    select.focus();
+  });
+  recorder.addEventListener('blur', () => {
+    if (!recording) return;
+    recording = false;
+    el('recordHint').textContent = 'Recording cancelled.';
+  });
+  el('paletteShortcut').focus();
+  el('closeShortcuts').addEventListener('click', closeModal);
+  el('saveShortcuts').addEventListener('click', async () => {
+    const value = el('paletteShortcut').value;
+    if (!Shortcuts.valid(value)) return;
+    state.settings = await Store.saveSettings({ paletteShortcut: value });
+    updatePaletteKeyHint();
+    closeModal();
+    toast('Palette shortcut updated');
+  });
+  el('openBrowserShortcuts').addEventListener('click', async () => {
+    try { await chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }); }
+    catch (err) { toast('Open chrome://extensions/shortcuts in a new tab'); }
+  });
+  if (chrome.commands && chrome.commands.getAll) {
+    chrome.commands.getAll().then((commands) => {
+      const field = el('captureShortcut');
+      if (field) {
+        const capture = commands.find((command) => command.name === '_execute_action');
+        field.textContent = capture && capture.shortcut ? capture.shortcut : 'Not assigned';
+      }
+    }).catch(() => { if (el('captureShortcut')) el('captureShortcut').textContent = 'See browser settings'; });
+  } else el('captureShortcut').textContent = 'See browser settings';
 }
 
 // ----------------------------------------------------------------- render

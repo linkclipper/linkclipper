@@ -27,6 +27,7 @@
       <header class="topbar">
         <input id="search" class="search" type="search"
                placeholder="Search titles, notes, tags, URLs… ( / to focus )" />
+        <button id="commandsBtn" class="commands-trigger" type="button" title="Open command palette">Commands <kbd>Ctrl+Shift+P</kbd></button>
         <div class="filters">
           <select id="typeFilter" class="filter-select">
             <option value="">All types</option>
@@ -48,6 +49,15 @@
 
   <div id="modalBack" class="modal-back hidden">
     <div id="modal" class="modal"></div>
+  </div>
+
+  <div id="paletteBack" class="palette-back hidden">
+    <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+      <input id="paletteQuery" class="palette-query" type="search" autocomplete="off"
+             placeholder="Search commands or boards…" aria-label="Search commands" />
+      <div id="paletteList" class="palette-list" role="listbox" aria-label="Commands"></div>
+      <div class="palette-foot">↑ ↓ Navigate <span>Enter Run</span> <span>Esc Close</span></div>
+    </div>
   </div>
 
   <div id="toast" class="toast hidden"></div>
@@ -100,6 +110,7 @@
   <script src="../lib/shared.js"></script>
   <script src="../lib/store.js"></script>
   <script src="../lib/shares.js"></script>
+  <script src="../lib/shortcuts.js"></script>
   <script src="../lib/supabase.js"></script>
   <script src="dashboard.js"></script>
   <script>
@@ -128,6 +139,8 @@
         state.selected = new Set(['i-yt', 'i-ig']);
         renderContent();
       }
+      else if (st === 'palette') openCommandPalette();
+      else if (st === 'shortcuts') openShortcutSettings();
       document.documentElement.setAttribute('data-devstate', st);
     }, 300);
   </script>
