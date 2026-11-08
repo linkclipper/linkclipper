@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="popup-head">
+    <div class="brand">
+      <span class="logo">W</span>
+      <span class="brand-name">LinkClipper</span>
+    </div>
+    <a href="#" id="openDashboard" title="Open my collection">Open collection &#8599;</a>
+  </header>
+
+  <main id="main">
+    <!-- Saving state -->
+    <div id="saveView" class="view">
+      <div class="preview">
+        <a id="thumbLink" href="#" target="_blank" rel="noreferrer"></a>
+        <div id="badgeType" class="type-badge"></div>
+      </div>
+      <h1 id="titleInput" contenteditable="plaintext-only" spellcheck="false"></h1>
+      <p id="metaLine" class="meta"></p>
+
+      <label class="field-label">Board</label>
+      <div class="board-row">
+        <select id="boardSelect" class="input"></select>
+      </div>
+      <div id="newBoardRow" class="board-row hidden">
+        <input id="newBoardName" class="input" placeholder="New board name&hellip;" />
+        <div id="newBoardColors" class="color-row"></div>
+      </div>
+
+      <label class="field-label">Tags</label>
+      <div class="tags-wrap">
+        <div id="tagChips" class="chips"></div>
+        <input id="tagInput" class="input" list="knownTags" placeholder="Add a tag, hit Enter" />
+        <datalist id="knownTags"></datalist>
+      </div>
+
+      <label class="field-label">Note <span class="optional">(optional)</span></label>
+      <textarea id="noteInput" class="input" rows="2" placeholder="Why do you want to come back to this?"></textarea>
+
+      <div id="duplicateNotice" class="notice hidden"></div>
+
+      <button id="saveBtn" class="save-btn">Save to collection</button>
+    </div>
+
+    <!-- Confirmation state -->
+    <div id="doneView" class="view hidden center">
+      <div class="done-check">&#10003;</div>
+      <div id="doneText" class="done-text">Saved</div>
+      <button id="editBtn" class="link-btn">Edit</button>
+      <button id="viewBtn" class="link-btn">Open collection</button>
+      <button id="anotherBtn" class="link-btn">Save anyway as new</button>
+    </div>
+
+    <!-- Unsupported page state -->
+    <div id="blockedView" class="view hidden center">
+      <div class="done-check warn">!</div>
+      <p class="done-text">This page can&rsquo;t be saved<br /><span class="sub">(browser internals &amp; extension pages)</span></p>
+    </div>
+  </main>
+
+  <script src="../lib/shared.js"></script>
+  <script src="../lib/store.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

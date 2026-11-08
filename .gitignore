@@ -1,0 +1,4 @@
+﻿node_modules/
+*.zip
+tools/store-assets/
+*.png.tmp

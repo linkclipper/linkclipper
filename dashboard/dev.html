@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LinkClipper â€” dev harness</title>
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="logo">W</span>
+        <span class="brand-name">LinkClipper</span>
+      </div>
+      <nav id="boardNav" class="board-nav"></nav>
+      <button id="newBoardBtn" class="ghost-btn">ï¼‹ New board</button>
+      <div class="sidebar-foot">
+        <button id="syncOpenBtn" class="foot-btn">â˜ Sync</button>
+        <button id="exportBtn" class="foot-btn">â†“ Export</button>
+        <button id="importBtn" class="foot-btn">â†‘ Import</button>
+        <input type="file" id="importFile" accept="application/json" class="hidden" />
+      </div>
+      <div id="syncStatusShort" class="sync-status"></div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <input id="search" class="search" type="search"
+               placeholder="Search titles, notes, tags, URLsâ€¦ ( / to focus )" />
+        <div class="filters">
+          <select id="typeFilter" class="filter-select">
+            <option value="">All types</option>
+          </select>
+          <select id="tagFilter" class="filter-select">
+            <option value="">All tags</option>
+          </select>
+          <select id="sortSelect" class="filter-select">
+            <option value="new">Newest first</option>
+            <option value="old">Oldest first</option>
+            <option value="title">Title Aâ†’Z</option>
+          </select>
+        </div>
+        <div id="countLine" class="count-line"></div>
+      </header>
+      <main id="content" class="content"></main>
+    </div>
+  </div>
+
+  <div id="modalBack" class="modal-back hidden">
+    <div id="modal" class="modal"></div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    // ---- chrome.* shim (test harness only) ------------------------------
+    const seedBoards = [
+      { id: 'inbox', name: 'Inbox', color: '#5C54EE', description: '', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', deletedAt: null },
+      { id: 'b2', name: 'Code Inspiration', color: '#0EA5A5', description: '', createdAt: '2026-01-02T00:00:00Z', updatedAt: '2026-01-02T00:00:00Z', deletedAt: null },
+    ];
+    const seedItems = [
+      { id: 'i-yt', type: 'video', boardId: 'inbox', title: 'Building an App in One Prompt â€” we should rethink dev workflows', url: 'https://www.youtube.com/shorts/dQw4w9WgXcQ', source: 'YouTube Shorts', thumbnail: '', tags: ['ai', 'dev'], note: '', selection: '', description: '', canonical: '', createdAt: '2026-11-01T10:00:00Z', updatedAt: '2026-11-01T10:00:00Z', deletedAt: null },
+      { id: 'i-ig', type: 'reel', boardId: 'inbox', title: 'Instagram reel about clean interfaces', url: 'https://www.instagram.com/reel/Cxyz123/', source: 'Instagram', thumbnail: '', tags: ['design'], note: '', selection: '', description: '', canonical: '', createdAt: '2026-11-02T10:00:00Z', updatedAt: '2026-11-02T10:00:00Z', deletedAt: null },
+      { id: 'i-art', type: 'article', boardId: 'b2', title: 'How browsers composite blurred layers', url: 'https://example.org/article', source: 'example.org', thumbnail: '', tags: ['browsers'], note: 'Deep note about GPU planes.', selection: '', description: '', canonical: '', createdAt: '2026-11-03T10:00:00Z', updatedAt: '2026-11-03T10:00:00Z', deletedAt: null },
+      { id: 'i-page', type: 'page', boardId: 'b2', title: 'What Do We Build Now That AI Can Do the Work?', url: 'https://example.org/essay', source: 'example.org', thumbnail: '', tags: ['ai'], note: '', selection: '', description: '', canonical: '', createdAt: '2026-11-04T10:00:00Z', updatedAt: '2026-11-04T10:00:00Z', deletedAt: null },
+      { id: 'i-vim', type: 'video', boardId: 'b2', title: 'Vimeo clip that plays in place', url: 'https://vimeo.com/76979871', source: 'Vimeo', thumbnail: '', tags: ['video'], note: '', selection: '', description: '', canonical: '', createdAt: '2026-11-05T10:00:00Z', updatedAt: '2026-11-05T10:00:00Z', deletedAt: null },
+    ];
+    const mem = { wc_items: seedItems, wc_boards: seedBoards, wc_settings: { lastBoardId: 'inbox' } };
+
+    window.chrome = {
+      storage: {
+        local: {
+          async get(key) {
+            if (typeof key === 'string') return { [key]: mem[key] };
+            if (Array.isArray(key)) {
+              const out = {};
+              for (const k of key) out[k] = mem[k];
+              return out;
+            }
+            if (key && typeof key === 'object') {
+              const out = {};
+              for (const k of Object.keys(key)) out[k] = mem[k] !== undefined ? mem[k] : key[k];
+              return out;
+            }
+            return { ...mem };
+          },
+          async set(obj) { Object.assign(mem, obj); },
+          async remove(k) { for (const key of [].concat(k)) delete mem[key]; },
+        },
+        onChanged: { addListener() {}, removeListener() {} },
+      },
+      runtime: {
+        sendMessage: async (msg) => (msg && msg.type === 'wc:read'
+          ? { ok: true, status: 200, finalUrl: msg.url, text: 'Reading in place works.\n\nThis paragraph came from the service worker that fetched the page without hitting CORS, stripped scripts, styles, nav and footer, and kept the readable text. Articles you save will open here like a built-in reading view â€” with an Open original button and a cache so the second open is instant.\n\nThird paragraph to scroll.' }
+          : {}),
+        getURL: (p) => '../' + p,
+      },
+    };
+  </script>
+  <script src="../lib/shared.js"></script>
+  <script src="../lib/store.js"></script>
+  <script src="../lib/supabase.js"></script>
+  <script src="dashboard.js"></script>
+  <script>
+    // ?state=â€¦ drives scripted UI states for screenshots
+    const st = new URLSearchParams(location.search).get('state');
+    if (st) setTimeout(() => {
+      if (st === 'item') openItemModal('i-yt');
+      else if (st === 'igitem') openItemModal('i-ig');
+      else if (st === 'board') openBoardModal();
+      else if (st === 'sync') openSyncModal();
+      else if (st === 'toast') toast('Saved âœ“');
+      else if (st === 'empty') { state.items = []; renderContent(); }
+      else if (st === 'reader') openItemModal('i-art', { preview: true });
+      else if (st === 'vitem') openItemModal('i-vim', { preview: true });
+      document.documentElement.setAttribute('data-devstate', st);
+    }, 300);
+  </script>
+</body>
+</html>
