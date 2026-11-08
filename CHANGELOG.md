@@ -2,6 +2,9 @@
 
 ## 0.4.0 — share links (Phase B, v1)
 
+- **Dashboard polish and local profile:** refined collection hierarchy, navigation
+  and card surfaces; optional local display name, note and avatar color. Profile
+  data stays on this device and is never included in synced or shared boards.
 - **Command palette:** dashboard actions and board navigation in a searchable,
   keyboard-navigable overlay (Ctrl/⌘+Shift+P by default). The palette key is
   configurable locally via presets or a recorded combination. Settings show

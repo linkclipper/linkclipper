@@ -16,15 +16,21 @@ LinkClipper is a local-first Chrome/Brave extension (MV3) that clips anything yo
 
 ![LinkClipper dashboard](https://linkclipper.github.io/assets/webstore-1-grid.png)
 
+## Install in Chrome or Brave
+
+Until the Chrome Web Store listing is available, download the latest `LinkClipper-*.zip` from [GitHub Releases](https://github.com/linkclipper/linkclipper/releases/latest), extract it to a folder you will keep, open `chrome://extensions` (or `brave://extensions`), enable **Developer mode**, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. Reload the extension there after updating the folder. Local data stays in that browser profile; export a JSON backup before removing the extension.
+
 ## Highlights
 
 - **One-click save** — toolbar popup anywhere; in-page buttons on YouTube, Instagram, X/Twitter, Reddit, TikTok.
 - **Keyboard-first capture** — press **Alt+Shift+L** to open quick save, choose a board, then **Ctrl+Enter** (⌘+Enter on Mac) to save. No shortcut silently saves. If the browser has already assigned the key, set your own at `chrome://extensions/shortcuts`.
 - **Command palette** — use the **Commands** button or **Ctrl/⌘+Shift+P** in the dashboard to search actions and jump between boards. **Keyboard shortcuts** in the palette lets you pick a preset or record a custom palette key; browser-wide capture keys are managed separately by Chrome/Brave.
+- **Local profile** — add a display name, short note, and avatar color for your personal dashboard. It stays on this device, requires no account, and is not part of board sync or shared snapshots.
 - **Boards & tags** — Pinterest-style masonry, drag & drop, autocomplete, instant full-text search.
 - **Play in place** — IG/TikTok/Vimeo embed inline; YouTube opens a docked floating mini-player (vendor limitation, see docs).
 - **Read in place** — articles extract to a clean reading pane on first view and stay cached on the item.
 - **Local-first** — zero accounts, zero analytics. Optional sync goes only to *your own* Supabase project.
+- **Board snapshots** — share a self-contained link to a chosen board. Snapshots do not update or revoke after being copied; share only what you intend to show.
 
 ## Where this is heading
 

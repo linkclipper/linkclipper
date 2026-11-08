@@ -14,11 +14,19 @@
         <span class="brand-name">LinkClipper</span>
       </div>
 
+      <div class="sidebar-label">YOUR LIBRARY <span>✦</span></div>
+
       <nav id="boardNav" class="board-nav">
         <!-- rendered by JS -->
       </nav>
 
       <button id="newBoardBtn" class="ghost-btn">＋ New board</button>
+
+      <button id="profileBtn" class="profile-card" type="button" aria-label="Open local profile">
+        <span id="profileAvatar" class="profile-avatar">✦</span>
+        <span class="profile-copy"><strong id="profileName">Your space</strong><small>Local profile · Edit</small></span>
+        <span class="profile-chevron" aria-hidden="true">›</span>
+      </button>
 
       <div class="sidebar-foot">
         <button id="syncOpenBtn" class="foot-btn">☁ Sync</button>
@@ -75,6 +83,7 @@
 
   <script src="../lib/shared.js"></script>
   <script src="../lib/store.js"></script>
+  <script src="../lib/profile.js"></script>
   <script src="../lib/shares.js"></script>
   <script src="../lib/shortcuts.js"></script>
   <script src="../lib/supabase.js"></script>

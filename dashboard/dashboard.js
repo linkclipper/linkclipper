@@ -57,6 +57,7 @@ async function init() {
   });
 
   el('newBoardBtn').addEventListener('click', () => openBoardModal(null));
+  el('profileBtn').addEventListener('click', openProfileModal);
   el('syncOpenBtn').addEventListener('click', openSyncModal);
   el('exportBtn').addEventListener('click', exportJson);
   el('importBtn').addEventListener('click', () => el('importFile').click());
@@ -129,6 +130,7 @@ async function refresh(opts) {
   renderBoards();
   renderContent();
   renderSyncStatusShort();
+  renderProfile();
   updatePaletteKeyHint();
 
   if (opts && opts.markClean) await Store.saveSettings({ cleanSyncAt: state.settings.lastSyncAt });
@@ -164,6 +166,7 @@ function paletteCommands() {
     { title: 'Export collection', kind: 'Data', icon: '↓', keywords: 'backup json', run: exportJson },
     { title: 'Import collection', kind: 'Data', icon: '↑', keywords: 'restore json', run: () => el('importFile').click() },
     { title: 'Keyboard shortcuts', kind: 'Settings', icon: '⌨', keywords: 'hotkeys customize capture command palette', run: openShortcutSettings },
+    { title: 'Local profile', kind: 'Settings', icon: '✦', keywords: 'name avatar about personal', run: openProfileModal },
   ];
   const board = boardById(state.filters.board);
   if (board) commands.splice(3, 0,
@@ -316,6 +319,64 @@ function openShortcutSettings() {
       }
     }).catch(() => { if (el('captureShortcut')) el('captureShortcut').textContent = 'See browser settings'; });
   } else el('captureShortcut').textContent = 'See browser settings';
+}
+
+function renderProfile() {
+  const profile = Profile.normalize(state.settings && state.settings.profile);
+  el('profileName').textContent = profile.name || 'Your space';
+  el('profileAvatar').textContent = Profile.initials(profile);
+  el('profileAvatar').style.background = profile.color;
+  el('profileBtn').title = profile.bio || 'Edit your local profile';
+}
+
+function openProfileModal() {
+  const profile = Profile.normalize(state.settings && state.settings.profile);
+  el('modal').innerHTML = `
+    <div class="profile-modal-head">
+      <span class="profile-avatar large" id="profilePreview">${esc(Profile.initials(profile))}</span>
+      <div><h2>Your local profile</h2><p>A little personality for your own library.</p></div>
+    </div>
+    <label class="field-label" for="profileDisplayName">Display name</label>
+    <input id="profileDisplayName" class="input" maxlength="40" autocomplete="off" placeholder="What should we call you?" value="${esc(profile.name)}" />
+    <label class="field-label" for="profileBio">A short note <span class="optional">optional</span></label>
+    <textarea id="profileBio" class="input" maxlength="120" rows="3" placeholder="What are you collecting lately?">${esc(profile.bio)}</textarea>
+    <div class="field-label">Avatar color</div>
+    <div id="profileColors" class="profile-colors" role="group" aria-label="Avatar color">
+      ${Profile.COLORS.map((color) => `<button type="button" class="profile-color ${profile.color === color ? 'chosen' : ''}"
+        style="background:${color}" data-color="${color}" aria-label="Choose ${color} color" aria-pressed="${profile.color === color}"></button>`).join('')}
+    </div>
+    <p class="profile-privacy">This profile stays on this device. It is not an account, is not uploaded with board sync, and is not included in shared boards.</p>
+    <div class="row"><button id="profileCancel" type="button" class="btn">Cancel</button><span class="spacer"></span>
+      <button id="profileSave" type="button" class="btn primary">Save profile</button></div>`;
+  el('modalBack').classList.remove('hidden');
+  let color = profile.color;
+  const preview = el('profilePreview');
+  const updatePreview = () => {
+    preview.textContent = Profile.initials({ name: el('profileDisplayName').value });
+    preview.style.background = color;
+  };
+  updatePreview();
+  el('profileDisplayName').addEventListener('input', updatePreview);
+  el('profileColors').querySelectorAll('[data-color]').forEach((button) => {
+    button.addEventListener('click', () => {
+      color = button.dataset.color;
+      el('profileColors').querySelectorAll('[data-color]').forEach((option) => {
+        option.classList.toggle('chosen', option === button);
+        option.setAttribute('aria-pressed', String(option === button));
+      });
+      updatePreview();
+    });
+  });
+  el('profileCancel').addEventListener('click', closeModal);
+  el('profileSave').addEventListener('click', async () => {
+    const next = Profile.normalize({ name: el('profileDisplayName').value, bio: el('profileBio').value, color });
+    state.settings = await Store.saveSettings({ profile: next });
+    renderProfile();
+    renderContent();
+    closeModal();
+    toast('Profile saved on this device');
+  });
+  el('profileDisplayName').focus();
 }
 
 // ----------------------------------------------------------------- render
@@ -542,6 +603,11 @@ function renderContent() {
     : '';
 
   el('content').innerHTML =
+    `<div class="collection-head"><div><span class="eyebrow">YOUR PRIVATE SPACE</span>
+      <h1>${state.filters.board && selectedBoard ? esc(selectedBoard.name) : 'Your collection'}<span class="heading-spark"> ✦</span></h1>
+      <p>${state.filters.board && selectedBoard ? esc(selectedBoard.description || 'A home for what matters to you.') :
+        `Welcome${Profile.normalize(state.settings && state.settings.profile).name ? ', ' + esc(Profile.normalize(state.settings.profile).name) : ''}. Everything worth keeping, beautifully in reach.`}</p>
+    </div><span class="local-badge"><span class="local-dot"></span> On this device</span></div>` +
     chipRow +
     `<div class="count-line board-toolbar ${state.bulkMode ? 'bulk-active' : ''}"><span>${items.length} item${items.length === 1 ? '' : 's'}</span>
       <span class="spacer"></span>
