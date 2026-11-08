@@ -1,5 +1,5 @@
-# Packs WebCollector for the Chrome Web Store.
-# Produces WebCollector-<version>.zip with production files only
+# Packs LinkClipper for the Chrome Web Store.
+# Produces LinkClipper-<version>.zip with production files only
 # (dev harnesses, tools and generated blobs are excluded).
 param([string]$OutDir = (Split-Path -Parent $PSScriptRoot))
 
@@ -11,7 +11,7 @@ $stage = Join-Path $env:TEMP ("wc-stage-" + $ver)
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Path $stage | Out-Null
 
-# Ship exactly: manifest, worker, icons, 3 libs, popup, dashboard, content overlay, supabase docs.
+# Ship exactly: manifest, worker, icons, libraries, popup, dashboard, content overlay, supabase docs.
 foreach ($d in @('lib', 'popup', 'dashboard', 'content', 'supabase', 'icons')) {
   Copy-Item (Join-Path $root $d) (Join-Path $stage $d) -Recurse
 }

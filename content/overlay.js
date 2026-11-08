@@ -1,5 +1,5 @@
 // LinkClipper - in-page saving for social sites.
-// Injects brand "W" buttons into YouTube (watch bar, Shorts rail, list
+// Injects LinkClipper link-mark buttons into YouTube (watch bar, Shorts rail, list
 // thumbnails), Instagram action stacks, X (Twitter) post rows, Reddit post
 // rows and TikTok. Clicking opens an in-page quick-save dialog (board picker,
 // tags, note) exactly like the toolbar popup.
@@ -45,19 +45,21 @@
 
   chrome.storage.onChanged.addListener(() => { loadAll(); });
 
-  // -------------------------------------------------------- W logo svg
+  // -------------------------------------------------------- link-mark svg
 
   let gid = 0;
   function logoSvg(px) {
     const id = 'wcg' + (++gid);
     const s = px || 14;
-    return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '" aria-hidden="true">' +
+    return '<svg viewBox="0 0 64 64" width="' + s + '" height="' + s + '" aria-hidden="true">' +
       '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="#5C54EE"/><stop offset="1" stop-color="#7C3AED"/>' +
+      '<stop offset="0" stop-color="#7b6cff"/><stop offset="1" stop-color="#b46bff"/>' +
       '</linearGradient></defs>' +
-      '<rect width="24" height="24" rx="6.5" fill="url(#' + id + ')"/>' +
-      '<text x="12" y="12.6" text-anchor="middle" dominant-baseline="central" fill="#fff" ' +
-      'font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="13.5">W</text></svg>';
+      '<rect width="64" height="64" rx="15" fill="url(#' + id + ')"/>' +
+      '<g fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M25 35 C29 39 35 39 39 35 L48 26 C54 20 54 13 48 8 C43 3 36 4 31 9 L26 14"/>' +
+      '<path d="M39 29 C35 25 29 25 25 29 L16 38 C10 44 10 51 16 56 C21 61 28 60 33 55 L38 50"/>' +
+      '</g></svg>';
   }
 
   // -------------------------------------------------------- toast

@@ -1,40 +1,56 @@
-# Generates WebCollector toolbar/app icons as PNGs using .NET drawing.
-# Re-run any time:  powershell -ExecutionPolicy Bypass -File tools/make-icons.ps1
-
+# Generates raster icons from the same link geometry as icons/mark.svg.
+# Run: powershell -ExecutionPolicy Bypass -File tools/make-icons.ps1
 Add-Type -AssemblyName System.Drawing
 $root = Split-Path -Parent $PSScriptRoot
 
 foreach ($size in 16, 32, 48, 128) {
-  $bmp = New-Object System.Drawing.Bitmap $size, $size
-  $g = [System.Drawing.Graphics]::FromImage($bmp)
+  $scale = [float]($size * 4 / 64)
+  $large = New-Object System.Drawing.Bitmap ($size * 4), ($size * 4)
+  $g = [System.Drawing.Graphics]::FromImage($large)
   $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+  $g.ScaleTransform($scale, $scale)
 
-  # diagonal gradient background (brand indigo -> violet)
-  $rect = New-Object System.Drawing.Rectangle 0, 0, $size, $size
-  $c1 = [System.Drawing.Color]::FromArgb(255, 92, 84, 238)   # #5C54EE
-  $c2 = [System.Drawing.Color]::FromArgb(255, 124, 58, 237)  # #7C3AED
-  $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush $rect, $c1, $c2, 45
-  $g.FillRectangle($brush, $rect)
+  $tile = New-Object System.Drawing.Drawing2D.GraphicsPath
+  $tile.AddArc(0, 0, 30, 30, 180, 90)
+  $tile.AddArc(34, 0, 30, 30, 270, 90)
+  $tile.AddArc(34, 34, 30, 30, 0, 90)
+  $tile.AddArc(0, 34, 30, 30, 90, 90)
+  $tile.CloseFigure()
+  $rect = New-Object System.Drawing.Rectangle 0, 0, 64, 64
+  $c1 = [System.Drawing.ColorTranslator]::FromHtml('#7b6cff')
+  $c2 = [System.Drawing.ColorTranslator]::FromHtml('#b46bff')
+  $fill = New-Object System.Drawing.Drawing2D.LinearGradientBrush $rect, $c1, $c2, 45
+  $g.FillPath($fill, $tile)
 
-  # white "W" centered
-  $fontSize = [float]($size * 0.62)
-  $font = New-Object System.Drawing.Font ('Segoe UI', $fontSize, ([System.Drawing.FontStyle]::Bold), ([System.Drawing.GraphicsUnit]::Pixel))
-  $format = New-Object System.Drawing.StringFormat
-  $format.Alignment = [System.Drawing.StringAlignment]::Center
-  $format.LineAlignment = [System.Drawing.StringAlignment]::Center
-  $sf = New-Object System.Drawing.SizeF $size, $size
-  $g.DrawString('W', $font, [System.Drawing.Brushes]::White, (New-Object System.Drawing.RectangleF 0, -1, $sf.Width, $sf.Height), $format)
+  $pen = New-Object System.Drawing.Pen ([System.Drawing.Color]::White), 5.5
+  $pen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
+  $pen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
+  $pen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
+  $top = New-Object System.Drawing.Drawing2D.GraphicsPath
+  $top.AddBezier(25, 35, 29, 39, 35, 39, 39, 35)
+  $top.AddLine(39, 35, 48, 26)
+  $top.AddBezier(48, 26, 54, 20, 54, 13, 48, 8)
+  $top.AddBezier(48, 8, 43, 3, 36, 4, 31, 9)
+  $top.AddLine(31, 9, 26, 14)
+  $bottom = New-Object System.Drawing.Drawing2D.GraphicsPath
+  $bottom.AddBezier(39, 29, 35, 25, 29, 25, 25, 29)
+  $bottom.AddLine(25, 29, 16, 38)
+  $bottom.AddBezier(16, 38, 10, 44, 10, 51, 16, 56)
+  $bottom.AddBezier(16, 56, 21, 61, 28, 60, 33, 55)
+  $bottom.AddLine(33, 55, 38, 50)
+  $g.DrawPath($pen, $top)
+  $g.DrawPath($pen, $bottom)
 
+  $bmp = New-Object System.Drawing.Bitmap $size, $size
+  $small = [System.Drawing.Graphics]::FromImage($bmp)
+  $small.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $small.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+  $small.DrawImage($large, 0, 0, $size, $size)
   $out = Join-Path $root ("icons\icon$size.png")
-  New-Item -ItemType Directory -Force -Path (Join-Path $root 'icons') | Out-Null
   $bmp.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)
-
-  $g.Dispose(); $bmp.Dispose(); $brush.Dispose(); $font.Dispose()
+  $small.Dispose(); $bmp.Dispose(); $g.Dispose(); $large.Dispose()
+  $tile.Dispose(); $fill.Dispose(); $pen.Dispose(); $top.Dispose(); $bottom.Dispose()
   Write-Host "wrote $out"
 }
-
-# 32x32 favicon for the dashboard tab (same art, larger W)
-$bmp = New-Object System.Drawing.Bitmap 32, 32
-# (already generated above as icon32.png; reuse it)
 Copy-Item (Join-Path $root 'icons\icon32.png') (Join-Path $root 'dashboard\icon32.png') -Force
 Write-Host 'dashboard favicon ready'

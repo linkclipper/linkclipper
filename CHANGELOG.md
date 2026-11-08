@@ -2,6 +2,9 @@
 
 ## 0.4.0 — share links (Phase B, v1)
 
+- **LinkClipper identity:** replaced the legacy `W` roundel with a linked-loop
+  mark across the toolbar, popup, dashboard, in-page buttons and public site.
+  Refreshed store and site screenshots to match.
 - **Dashboard polish and local profile:** refined collection hierarchy, navigation
   and card surfaces; optional local display name, note and avatar color. Profile
   data stays on this device and is never included in synced or shared boards.

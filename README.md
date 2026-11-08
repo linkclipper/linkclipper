@@ -4,6 +4,8 @@
 
 LinkClipper is a local-first Chrome/Brave extension (MV3) that clips anything you browse — YouTube Shorts, reels, articles, pages — into boards you can tag, search, and revisit. In-page save buttons live right next to the videos you're watching; articles open as clean readable text *inside* your dashboard.
 
+The linked-loop mark is the product icon. Its vector source is `icons/mark.svg`; run `tools/make-icons.ps1` to regenerate toolbar PNG sizes on Windows.
+
 ![badge](https://img.shields.io/badge/manifest-MV3-7b6cff) ![badge](https://img.shields.io/badge/license-MIT-green) ![badge](https://img.shields.io/badge/data-local--first-blueviolet)
 
 <p>
