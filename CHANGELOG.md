@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 — share links (Phase B, v1)
+## 0.4.0 — share links and local-first polish (2026-11-08)
 
 - **LinkClipper identity:** replaced the legacy `W` roundel with a linked-loop
   mark across the toolbar, popup, dashboard, in-page buttons and public site.
