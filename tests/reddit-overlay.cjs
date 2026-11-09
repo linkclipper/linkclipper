@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
-const source = fs.readFileSync(path.join(__dirname, '..', 'content', 'overlay.js'), 'utf8');
+const source = fs.readFileSync(path.join(__dirname, '..', 'content', 'overlay.js'), 'utf8').replace(/\r\n/g, '\n');
 const payloadSource = source.match(/function redditPayload\(post\) \{[\s\S]*?\n  \}/)[0];
 const adapterSource = source.match(/(\{\n      name: 'reddit',[\s\S]*?\n    \}),\n    \{\n      name: 'tiktok'/)[1];
 
