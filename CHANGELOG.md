@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Social saves now prefer media belonging to the X post rather than an avatar or
+  unrelated image. Text-only and broken-image posts show an offline source mark;
+  recognizable source badges also appear on collection cards and save previews.
+
 ## 0.4.0 — share links and local-first polish (2026-11-08)
 
 - **LinkClipper identity:** replaced the legacy `W` roundel with a linked-loop

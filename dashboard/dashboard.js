@@ -521,28 +521,23 @@ function visibleItems() {
   return out;
 }
 
-// Broken thumbnail -> replace with the type-colored placeholder.
+// Broken thumbnail -> source-aware placeholder (also used when no media exists).
 WC.fallbackThumb = function (img) {
   const wrap = img.parentElement;
   if (!wrap) return;
-  const div = document.createElement('div');
-  div.className = 'ph';
-  div.style.cssText =
-    'height:110px;background:linear-gradient(135deg,' + (img.dataset.color || '#64748B') + 'cc,' +
-    (img.dataset.color || '#64748B') + '77)';
-  div.textContent = img.dataset.emoji || '⚙';
-  wrap.innerHTML = '';
-  wrap.appendChild(div);
+  img.outerHTML = img.dataset.fallback;
 };
 
 function thumbHtml(item) {
   const tm = WC.TYPES[item.type] || WC.TYPES.page;
+  const source = WC.sourceIdentity(item.url);
+  const placeholder = `<div class="ph ${source ? 'source-ph' : ''}" style="height:${item.type === 'article' ? 72 : 110}px;background:linear-gradient(135deg,${esc(source ? source.color : tm.color)}cc,${esc(source ? source.color : tm.color)}77)">${source ? WC.sourceBadge(item.url, 'source-ph-mark') : tm.emoji}</div>`;
   if (item.thumbnail) {
     return `<img loading="lazy" src="${esc(item.thumbnail)}" alt=""
-              data-color="${esc(tm.color)}" data-emoji="${tm.emoji}"
+              data-fallback="${esc(placeholder)}"
               onerror="WC.fallbackThumb(this)">`;
   }
-  return `<div class="ph" style="height:${item.type === 'article' ? 72 : 110}px;background:linear-gradient(135deg,${esc(tm.color)}cc,${esc(tm.color)}77)">${tm.emoji}</div>`;
+  return placeholder;
 }
 
 function cardHtml(i) {
@@ -563,7 +558,7 @@ function cardHtml(i) {
       ${selecting ? '</div>' : '</a>'}
       <div class="card-body">
         <div class="card-title">${esc(i.title)}</div>
-        <div class="card-meta">${esc(i.source)} · ${esc(date)}</div>
+        <div class="card-meta">${WC.sourceBadge(i.url)}<span>${esc(WC.sourceIdentity(i.url)?.name || i.source || WC.domain(i.url))} · ${esc(date)}</span></div>
         ${i.note ? `<div class="note-snippet">&#128221; ${esc(i.note)}</div>` : ''}
         ${(i.tags || []).length ? `<div class="card-tags">${tags}</div>` : ''}
         <div class="board-line">

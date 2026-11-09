@@ -66,8 +66,27 @@ function pageExtractor() {
   const link = document.querySelector('link[rel="canonical"]');
   if (link && link.href && link.href.indexOf('http') === 0) canonical = link.href;
 
-  let image = meta('og:image') || meta('twitter:image') || meta('twitter:image:src');
-  if (!image) {
+  const isXPost = /^(?:www\.)?(?:x|twitter)\.com$/i.test(location.hostname) && /\/status\/\d+/.test(location.pathname);
+  let image = '';
+  if (isXPost) {
+    const id = location.pathname.match(/\/status\/(\d+)/)[1];
+    const articles = [...document.querySelectorAll('article')];
+    const post = articles.find((a) => [...a.querySelectorAll('a[href*="/status/"]')]
+      .some((link) => link.getAttribute('href').includes('/status/' + id))) ||
+      (articles.length === 1 ? articles[0] : null);
+    const media = post && [...post.querySelectorAll('img')]
+      .find((img) => /\/media\//.test(img.currentSrc || img.src || '') &&
+        /(^|\.)pbs\.twimg\.com$/i.test((() => { try { return new URL(img.currentSrc || img.src).hostname; } catch (e) { return ''; } })()));
+    image = (media && (media.currentSrc || media.src)) ||
+      (post && post.querySelector('video[poster]') || {}).poster || '';
+    if (!image) {
+      const og = meta('og:image') || meta('twitter:image') || meta('twitter:image:src');
+      if (/^https:\/\/pbs\.twimg\.com\/media\//i.test(og)) image = og;
+    }
+  } else {
+    image = meta('og:image') || meta('twitter:image') || meta('twitter:image:src');
+  }
+  if (!image && !isXPost) {
     const img = document.querySelector('article img, main img, img[class*="thumb" i], img[class*="hero" i]');
     if (img && (img.currentSrc || img.src) && (img.currentSrc || img.src).indexOf('http') === 0) {
       image = img.currentSrc || img.src;
@@ -139,12 +158,17 @@ function buildDraft() {
 function renderPreview() {
   const link = el('thumbLink');
   link.href = state.item.url || '#';
+  const source = WC.sourceIdentity(state.item.url);
+  const fallback = () => {
+    link.innerHTML = '';
+    if (source) link.innerHTML = WC.sourceBadge(state.item.url, 'source-preview-mark');
+  };
+  fallback();
   if (state.item.thumbnail) {
     const img = document.createElement('img');
+    img.onerror = fallback;
+    link.prepend(img);
     img.src = state.item.thumbnail;
-    img.onload = () => {}; // <img> just paints; on error we fall back to gradient
-    img.onerror = () => { link.innerHTML = ''; };
-    link.appendChild(img);
   }
   const tm = WC.TYPES[state.item.type];
   const badge = el('badgeType');

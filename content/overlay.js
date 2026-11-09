@@ -172,7 +172,7 @@
         '<span class="wc-badge" style="background:' + tm.color + '">' + tm.emoji + ' ' + tm.label + '</span>' +
         '<button type="button" class="wc-x" title="Close">&#215;</button>' +
       '</header>' +
-      '<div class="wc-preview" style="background-image:url(&quot;' + (st.payload.thumbnail || '') + '&quot;)"></div>' +
+      '<div class="wc-preview"></div>' +
       '<div class="wc-tedit" contenteditable="plaintext-only" spellcheck="false"></div>' +
       '<div class="wc-meta">' + WC.escapeHtml(WC.domain(st.payload.url)) +
         (st.existing ? ' &#183; updating saved item' : '') + '</div>' +
@@ -197,6 +197,14 @@
     // fill dynamic bits
     const title = card.querySelector('.wc-tedit');
     title.textContent = st.existing ? st.existing.title : st.payload.title;
+    const preview = card.querySelector('.wc-preview');
+    preview.innerHTML = WC.sourceBadge(st.payload.url, 'wc-source-mark');
+    if (st.payload.thumbnail) {
+      const media = new Image();
+      media.alt = '';
+      media.onload = () => { preview.prepend(media); };
+      media.src = st.payload.thumbnail;
+    }
 
     const sel = card.querySelector('.wc-bselect');
     boards.forEach((b) => {
@@ -476,11 +484,14 @@
       if (link) url = new URL(link.getAttribute('href'), location.origin).href;
     } catch (e) { /* keep location */ }
     const body = article.querySelector('[data-testid="tweetText"]');
-    const img = article.querySelector('img[src*="pbs.twimg.com/media"]');
+    const img = [...article.querySelectorAll('img')].find((node) => {
+      try { const u = new URL(node.currentSrc || node.src); return u.hostname === 'pbs.twimg.com' && u.pathname.startsWith('/media/'); }
+      catch (e) { return false; }
+    });
     return {
       url,
       title: ((body && body.textContent) || document.title || '').trim().slice(0, 140),
-      thumbnail: img ? img.src : '',
+      thumbnail: img ? (img.currentSrc || img.src) : (article.querySelector('video[poster]') || {}).poster || '',
       type: WC.detectFromUrl(url).type || 'social',
     };
   }
