@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reddit feed and post pages now show a labeled LinkClipper save icon beside
+  each post's menu; post titles and permalinks are captured from the post.
 - Social saves now prefer media belonging to the X post rather than an avatar or
   unrelated image. Text-only and broken-image posts show an offline source mark;
   recognizable source badges also appear on collection cards and save previews.

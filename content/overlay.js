@@ -393,11 +393,13 @@
         if (saved && !was) {
           r.el.classList.add('saved');
           r.el.title = 'Saved in LinkClipper - click to edit';
+          r.el.setAttribute('aria-label', 'Saved in LinkClipper - click to edit');
           const lb = r.el.querySelector('.wc-label');
           if (lb) lb.textContent = 'Saved';
         } else if (!saved && was) {
           r.el.classList.remove('saved');
           r.el.title = 'Save to LinkClipper';
+          r.el.setAttribute('aria-label', 'Save to LinkClipper');
           const lb = r.el.querySelector('.wc-label');
           if (lb) lb.textContent = 'Save';
         }
@@ -413,12 +415,13 @@
     btn.setAttribute('type', 'button');
     btn.className = 'wc-btn wc-' + kind;
     btn.title = 'Save to LinkClipper';
+    btn.setAttribute('aria-label', 'Save to LinkClipper');
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       openDialog(getPayload);
     });
-    if (kind === 'chip' || kind === 'rail') {
+    if (kind === 'chip' || kind === 'rail' || kind === 'reddit') {
       btn.innerHTML = '<span class="wc-logo">' + logoSvg(kind === 'chip' ? 18 : 20) + '</span>' +
         '<span class="wc-label">Save</span>';
     } else if (kind === 'float') {
@@ -500,13 +503,13 @@
     const permalink = post.getAttribute('permalink') || '';
     let url = location.href;
     try {
-      url = new URL(permalink, location.origin).href;
+      if (permalink) url = new URL(permalink, location.origin).href;
     } catch (e) { /* fallback to location */ }
-    const t = post.querySelector('h1') || {};
-    const img = post.querySelector('img');
+    const t = post.querySelector('[slot="title"], h1, h2, h3');
+    const img = post.querySelector('[slot="post-media-container"] img, [slot="page-1"] img');
     return {
       url,
-      title: (post.getAttribute('title') || t.textContent || document.title).trim().slice(0, 140),
+      title: (post.getAttribute('post-title') || post.getAttribute('title') || (t && t.textContent) || document.title).trim().slice(0, 140),
       thumbnail: img ? (img.src || '') : '',
       type: WC.detectFromUrl(url).type || 'social',
     };
@@ -608,19 +611,17 @@
       scan() {
         const out = [];
         document.querySelectorAll('shreddit-post').forEach((post) => {
-          const row = post.querySelector('[slot="interactal-actions"]');
-          if (row) {
-            if (!row.querySelector('.wc-btn')) {
-              out.push({ kind: 'row', parent: row, payload: () => redditPayload(post) });
-            }
-            return;
-          }
-          const save = post.querySelector('faceplate-save-button, button[aria-label="Save"]');
-          if (save) {
-            const holder = save.parentElement;
-            if (holder && !holder.querySelector('.wc-btn')) {
-              out.push({ kind: 'row', parent: holder, before: save, payload: () => redditPayload(post) });
-            }
+          if (!post.getAttribute('permalink') || post.querySelector('.wc-btn')) return;
+          // Reddit's current action bar is inside a shadow root. The light-DOM
+          // overflow-menu wrapper is visible on feeds and post detail pages.
+          const menu = post.querySelector('shreddit-post-overflow-menu, shreddit-async-loader[bundlename="shreddit_post_overflow_menu"]');
+          const holder = menu && menu.closest('span.flex');
+          if (holder) {
+            out.push({ kind: 'reddit', parent: holder, before: holder.firstElementChild, payload: () => redditPayload(post) });
+          } else {
+            // Older Reddit layouts still expose the action row in light DOM.
+            const row = post.querySelector('[slot="interactal-actions"], [slot="interactive-actions"]');
+            if (row) out.push({ kind: 'reddit', parent: row, payload: () => redditPayload(post) });
           }
         });
         return out;
