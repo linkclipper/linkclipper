@@ -94,7 +94,7 @@
   border-radius: 6px;
 }
 
-/* Reddit: a persistent, labeled control beside the post's overflow menu. */
+/* Reddit's older light-DOM action rows; modern rows use matching shadow styles. */
 .wc-reddit {
   position: relative;
   z-index: 2;

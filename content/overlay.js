@@ -439,6 +439,18 @@
         if (t.parent && t.parent.querySelector('.wc-btn')) return;
         const btn = makeButton(t.kind, t.payload);
         if (!t.parent) return;
+        if (t.kind === 'reddit' && t.root && !t.root.querySelector('style[data-wc-reddit]')) {
+          const style = document.createElement('style');
+          style.setAttribute('data-wc-reddit', '');
+          style.textContent = '.wc-reddit{display:inline-flex;align-items:center;justify-content:center;gap:6px;' +
+            'height:32px;padding:0 12px;border:0;border-radius:999px;flex:none;cursor:pointer;' +
+            'background:var(--color-neutral-background-weak,#292d30);color:inherit;' +
+            'font:600 12px/1 "Segoe UI",system-ui,sans-serif}' +
+            '.wc-reddit:hover{background:rgba(124,108,255,.28)}' +
+            '.wc-reddit.saved{color:#b3a7ff}' +
+            '.wc-reddit .wc-logo{display:inline-flex}.wc-reddit svg{display:block}';
+          t.root.appendChild(style);
+        }
         if (t.before && t.before.parentElement === t.parent) t.parent.insertBefore(btn, t.before);
         else t.parent.appendChild(btn);
 
@@ -611,18 +623,19 @@
       scan() {
         const out = [];
         document.querySelectorAll('shreddit-post').forEach((post) => {
-          if (!post.getAttribute('permalink') || post.querySelector('.wc-btn')) return;
-          // Reddit's current action bar is inside a shadow root. The light-DOM
-          // overflow-menu wrapper is visible on feeds and post detail pages.
-          const menu = post.querySelector('shreddit-post-overflow-menu, shreddit-async-loader[bundlename="shreddit_post_overflow_menu"]');
-          const holder = menu && menu.closest('span.flex');
-          if (holder) {
-            out.push({ kind: 'reddit', parent: holder, before: holder.firstElementChild, payload: () => redditPayload(post) });
-          } else {
-            // Older Reddit layouts still expose the action row in light DOM.
-            const row = post.querySelector('[slot="interactal-actions"], [slot="interactive-actions"]');
-            if (row) out.push({ kind: 'reddit', parent: row, payload: () => redditPayload(post) });
+          if (!post.getAttribute('permalink')) return;
+          const root = post.shadowRoot;
+          if (root && !redditRoots.has(root)) {
+            mo.observe(root, { childList: true, subtree: true });
+            redditRoots.add(root);
           }
+          // The modern action bar lives in the post's open shadow root.
+          // Insert after Share, before Reddit's trailing spacer/actions.
+          const row = (root && root.querySelector('rpl-action-bar [data-testid="action-row"]')) ||
+            post.querySelector('[slot="interactal-actions"], [slot="interactive-actions"]');
+          if (!row || row.querySelector('.wc-btn')) return;
+          const before = row.querySelector('div.ms-auto, slot[name="action-row-whitespace"]');
+          out.push({ kind: 'reddit', parent: row, before, root, payload: () => redditPayload(post) });
         });
         return out;
       },
@@ -671,6 +684,7 @@
   }
 
   const mo = new MutationObserver(schedule);
+  const redditRoots = new WeakSet();
   let lastHref = location.href;
   setInterval(() => {
     if (location.href !== lastHref) {
