@@ -4,6 +4,11 @@
 
 - Reddit feed and post pages now show a labeled LinkClipper save icon in the
   action row beside Share; post titles and permalinks are captured from the post.
+- Instagram posts, carousels and reels get a save control after Share, and
+  profile-grid tiles get a save badge. Captions and post-scoped images are
+  captured per post; profile-scoped links now get the Reel type.
+- TikTok video pages get a save control in the action rail, and profile grids
+  get the same save badge, via TikTok's stable `data-e2e` hooks.
 - Social saves now prefer media belonging to the X post rather than an avatar or
   unrelated image. Text-only and broken-image posts show an offline source mark;
   recognizable source badges also appear on collection cards and save previews.

@@ -452,6 +452,7 @@
           t.root.appendChild(style);
         }
         if (t.before && t.before.parentElement === t.parent) t.parent.insertBefore(btn, t.before);
+        else if (t.after && t.after.parentElement === t.parent) t.parent.insertBefore(btn, t.after.nextSibling);
         else t.parent.appendChild(btn);
 
         if (t.kind === 'thumb' || t.kind === 'float') {
@@ -480,15 +481,133 @@
     };
   }
 
-  function igPayload() {
-    const isPost = /\/(reel|reels|p|tv)\//.test(location.pathname);
+  // Instagram links may be root-scoped (/p/<id>/) or profile-scoped
+  // (/nasa/p/<id>/). Comment permalinks (/p/<id>/c/<id>/) are not posts.
+  const IG_POST = /^\/(?:[^/]+\/)?(?:p|reel)\/[\w-]+\/?(?:[?#].*)?$/;
+
+  function igClean(text) {
+    let s = (text || '').replace(/^(?:Photo|Video|Carousel) by .+? on .+?\.\s*/i, '').trim();
+    if (/^May be an image of /i.test(s)) s = s.replace(/^May be an image of /i, '');
+    else s = s.replace(/\s*May be an image of .*$/i, '');
+    return s.replace(/\s+/g, ' ').trim();
+  }
+
+  function igTitle(text) {
+    const t = (text || '').replace(/\s+/g, ' ').trim();
+    const quoted = t.match(/:\s*"([\s\S]*)"\s*$/);
+    if (quoted) return quoted[1].trim().slice(0, 140);
+    return t.replace(/\s*[•|]\s*Instagram.*$/i, '').trim().slice(0, 140);
+  }
+
+  function igPostUrl(scope) {
+    const a = scope && [...scope.querySelectorAll('a[href]')]
+      .find((n) => IG_POST.test(n.getAttribute('href') || ''));
+    if (a) {
+      try { return new URL(a.getAttribute('href'), location.origin).href; } catch (e) { /* keep looking */ }
+    }
+    const canonical = document.querySelector('link[rel="canonical"]');
+    const href = canonical && canonical.getAttribute('href');
+    if (href) {
+      try {
+        const u = new URL(href, location.origin);
+        if (IG_POST.test(u.pathname)) return u.href;
+      } catch (e) { /* keep location */ }
+    }
+    return location.href;
+  }
+
+  // The largest post image, never the author avatar in the post header.
+  function igImage(scope) {
+    if (!scope) return null;
+    const area = (img) => {
+      const r = img.getBoundingClientRect ? img.getBoundingClientRect() : {};
+      return (r.width || 0) * (r.height || 0) || (img.naturalWidth || 0) * (img.naturalHeight || 0);
+    };
+    const imgs = [...scope.querySelectorAll('img')].filter((img) => {
+      const src = img.currentSrc || img.src || '';
+      if (!/cdninstagram\.com|fbcdn\.net/.test(src)) return false;
+      if (/profile picture/i.test(img.getAttribute('alt') || '')) return false;
+      const r = img.getBoundingClientRect ? img.getBoundingClientRect() : {};
+      return (r.width || 0) >= 80 || (img.naturalWidth || 0) >= 200;
+    });
+    imgs.sort((a, b) => area(b) - area(a));
+    return imgs[0] || null;
+  }
+
+  function igPayload(scope) {
+    const url = igPostUrl(scope);
+    let samePage = false;
+    try {
+      const canonical = document.querySelector('link[rel="canonical"]');
+      const c = canonical && new URL(canonical.getAttribute('href'), location.origin);
+      samePage = !!c && c.pathname.replace(/\/$/, '') === new URL(url).pathname.replace(/\/$/, '');
+    } catch (e) { /* not the same page */ }
+    const meta = (name) => (document.querySelector('meta[property="' + name + '"], meta[name="' + name + '"]') || {}).content || '';
+    const img = igImage(scope);
+    let title = samePage ? igTitle(meta('og:title')) : '';
+    let thumbnail = samePage ? meta('og:image') : '';
+    if (!thumbnail && img) thumbnail = img.currentSrc || img.src || '';
+    if (!thumbnail && scope) thumbnail = (scope.querySelector('video[poster]') || {}).poster || '';
+    if (!title) title = igClean(img && img.getAttribute('alt')) || igTitle(meta('og:title')) || document.title;
     return {
-      url: location.href,
-      title: ((document.querySelector('meta[property="og:title"]') || {}).content ||
-        document.title || '').replace(/\s*[•|]\s*Instagram.*$/i, '').trim(),
-      thumbnail: (document.querySelector('meta[property="og:image"]') || {}).content ||
-        (document.querySelector('video') || {}).poster || '',
-      type: isPost ? 'reel' : 'page',
+      url,
+      title: title.replace(/\s*[•|]\s*Instagram.*$/i, '').trim().slice(0, 140),
+      thumbnail,
+      type: WC.detectFromUrl(url).type || 'social',
+    };
+  }
+
+  function igGridPayload(a, img) {
+    let url = location.href;
+    try { url = new URL(a.getAttribute('href'), location.origin).href; } catch (e) { /* keep location */ }
+    return {
+      url,
+      title: igClean(img && img.getAttribute('alt')) || 'Instagram post',
+      thumbnail: (img && (img.currentSrc || img.src)) || '',
+      type: WC.detectFromUrl(url).type || 'social',
+    };
+  }
+
+  function tiktokPayload(scope) {
+    const meta = (name) => (document.querySelector('meta[property="' + name + '"]') || {}).content || '';
+    const desc = document.querySelector('[data-e2e="browse-video-desc"], [data-e2e="video-desc"]');
+    let url = location.href;
+    try {
+      const canonical = document.querySelector('link[rel="canonical"]');
+      const c = canonical && canonical.getAttribute('href');
+      if (c && /\/video\/\d+/.test(c)) url = new URL(c, location.origin).href;
+    } catch (e) { /* keep location */ }
+    if (!/\/video\/\d+/.test(url) && scope) {
+      // Feed items need their own permalink; the page URL is the feed itself.
+      const item = (scope.closest && scope.closest('[data-e2e="recommend-list-item-container"],' +
+        ' [data-e2e="feed-video"], article, div[class*="DivItemContainer"]')) || document;
+      const link = (item.querySelector && item.querySelector('a[href*="/video/"]')) ||
+        (scope.closest && scope.closest('a[href*="/video/"]'));
+      if (link) {
+        try { url = new URL(link.getAttribute('href'), location.origin).href; } catch (e) { /* keep */ }
+      }
+    }
+    const video = (scope && scope.querySelector && scope.querySelector('video')) || document.querySelector('video');
+    const cover = document.querySelector('img[data-e2e="video-cover"]');
+    return {
+      url,
+      title: ((desc && desc.textContent) || document.title || '')
+        .replace(/\s*\|\s*TikTok$/i, '').replace(/\s+/g, ' ').trim().slice(0, 140),
+      thumbnail: meta('og:image') || (video && video.poster) ||
+        (cover && (cover.currentSrc || cover.src)) || '',
+      type: WC.detectFromUrl(url).type || 'reel',
+    };
+  }
+
+  function tiktokGridPayload(a, img) {
+    let url = location.href;
+    try { url = new URL(a.getAttribute('href'), location.origin).href; } catch (e) { /* keep */ }
+    const handle = (url.match(/@([^/]+)/) || [])[1] || 'TikTok';
+    return {
+      url,
+      title: ((img && img.getAttribute('alt')) || 'Video by @' + handle).trim().slice(0, 140),
+      thumbnail: (img && (img.currentSrc || img.src)) || '',
+      type: 'reel',
     };
   }
 
@@ -585,21 +704,31 @@
       match: () => /(^|\.)instagram\.com$/.test(HOST),
       scan() {
         const out = [];
-        const save = document.querySelector('svg[aria-label="Save"], svg[aria-label="Saved"]');
-        if (save) {
-          const wrapper = save.closest('button, [role="button"]') || save;
-          let node = wrapper;
-          while (node.parentElement && node.parentElement !== document.body &&
-                 node.parentElement.children.length < 3) {
-            node = node.parentElement;
-          }
-          const holder = node.parentElement || node;
-          if (holder && !holder.querySelector('.wc-btn')) {
-            out.push({ kind: 'row', parent: holder, before: wrapper, payload: igPayload });
-          }
-        }
-        if (!out.length && /\/(reel|reels)\//.test(location.pathname)) {
-          out.push({ kind: 'float', parent: document.body, payload: igPayload });
+        const rows = new Set();
+        // Feed posts, carousels and reels each expose Share in their action row.
+        // Inserting after it keeps Save next to the native actions.
+        document.querySelectorAll('svg[aria-label="Share"]').forEach((svg) => {
+          const wrap = svg.closest('div[role="button"], button');
+          const holder = wrap && wrap.parentElement;
+          if (!holder || rows.has(holder)) return;
+          rows.add(holder);
+          if (holder.querySelector(':scope > .wc-btn')) return;
+          out.push({
+            kind: 'row',
+            parent: holder,
+            after: wrap,
+            payload: () => igPayload(svg.closest('article')),
+          });
+        });
+        // Profile and explore grids: a save badge on each post tile.
+        document.querySelectorAll('a[href]').forEach((a) => {
+          if (!IG_POST.test(a.getAttribute('href') || '')) return;
+          const img = a.querySelector('img');
+          if (!img || a.querySelector('.wc-btn')) return;
+          out.push({ kind: 'thumb', parent: a, payload: () => igGridPayload(a, img) });
+        });
+        if (!rows.size && /\/(reel|reels)\//.test(location.pathname)) {
+          out.push({ kind: 'float', parent: document.body, payload: () => igPayload(null) });
         }
         return out;
       },
@@ -644,19 +773,30 @@
       name: 'tiktok',
       match: () => /(^|\.)tiktok\.com$/.test(HOST),
       scan() {
-        if (!/\/video\//.test(location.pathname)) return [];
         const out = [];
-        if (!document.querySelector('.wc-float')) {
-          out.push({
-            kind: 'float',
-            parent: document.body,
-            payload: () => ({
-              url: location.href,
-              title: document.title.replace(/\s*\|\s*TikTok$/i, '').trim(),
-              thumbnail: (document.querySelector('video') || {}).poster || '',
-              type: 'reel',
-            }),
-          });
+        const rows = new Set();
+        // TikTok keeps these data-e2e hooks across redesigns; the share control
+        // sits in the vertical action rail beside Like / Comment / Favorite.
+        const SHARE = '[data-e2e="share-button"], [data-e2e="share-icon"],' +
+          ' [data-e2e="browse-share-icon"], button[data-e2e*="share"]';
+        document.querySelectorAll(SHARE).forEach((anchor) => {
+          const wrap = anchor.closest('button, [role="button"]') || anchor;
+          const holder = wrap.parentElement;
+          if (!holder || rows.has(holder)) return;
+          if (!holder.querySelector('[data-e2e*="comment"], [data-e2e*="like"], [data-e2e*="favorite"]')) return;
+          rows.add(holder);
+          if (holder.querySelector(':scope > .wc-btn')) return;
+          out.push({ kind: 'rail', parent: holder, after: wrap, payload: () => tiktokPayload(wrap) });
+        });
+        // Profile grids: a save badge on each video tile.
+        document.querySelectorAll('a[href*="/video/"]').forEach((a) => {
+          if (!/^\/@[^/]+\/video\/\d+/.test(a.getAttribute('href') || '')) return;
+          const img = a.querySelector('img');
+          if (!img || a.querySelector('.wc-btn')) return;
+          out.push({ kind: 'thumb', parent: a, payload: () => tiktokGridPayload(a, img) });
+        });
+        if (!rows.size && /\/video\//.test(location.pathname)) {
+          out.push({ kind: 'float', parent: document.body, payload: () => tiktokPayload(null) });
         }
         return out;
       },
