@@ -1,0 +1,16 @@
+{
+  "name": "linkclipper-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local MCP server and HTTP API for a LinkClipper snapshot",
+  "bin": {
+    "linkclipper-mcp": "server.cjs"
+  },
+  "scripts": {
+    "start": "node server.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

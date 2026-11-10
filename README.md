@@ -33,6 +33,27 @@ Until the Chrome Web Store listing is available, download the latest `LinkClippe
 - **Read in place** — articles extract to a clean reading pane on first view and stay cached on the item.
 - **Local-first** — zero accounts, zero analytics. Optional sync goes only to *your own* Supabase project.
 - **Board snapshots** — share a self-contained link to a chosen board. Snapshots do not update or revoke after being copied; share only what you intend to show.
+- **Local AI access** — export a snapshot and run the MCP server in this repository with Claude Desktop, Cursor, or a local LLM over a `127.0.0.1` HTTP API. AI writes are staged for your review before they touch the library; nothing is sent to a cloud AI service.
+
+## AI access (local)
+
+LinkClipper can expose your collection to a local assistant without giving up the
+local-first rules:
+
+1. Dashboard → **✦ AI** → **Export AI snapshot**.
+2. Run `node mcp/server.cjs --library "…/linkclipper-library.json"` from this
+   repository (Node 20+).
+3. Connect an MCP client, or start `--http` for a local LLM or custom adapter.
+
+The server reads the snapshot and offers `search_items`, `get_item`,
+`list_boards`, `list_tags`, `library_stats`, plus staged `save_item`,
+`update_item`, `move_items` and `delete_items`. Changes land in
+`linkclipper-changes.json`; the dashboard shows a preview and applies them only
+after you confirm. See [mcp/README.md](mcp/README.md) for client setup, the HTTP
+API, and the safety model.
+
+Phase 1 is point-in-time: re-export to show the AI new saves. A live bridge is
+the next step.
 
 ## Where this is heading
 
@@ -51,6 +72,7 @@ lib/             shared helpers, storage + migrations, supabase sync client
 popup/           quick-save popup
 dashboard/       full dashboard app (+ dev.html harness for offline dev)
 content/         in-page save overlay for supported sites
+mcp/             local MCP server + localhost HTTP API for AI access
 tools/           pack.ps1 (store zip), icon generation
 docs/            architecture + roadmap
 ```

@@ -30,9 +30,11 @@
 
       <div class="sidebar-foot">
         <button id="syncOpenBtn" class="foot-btn">☁ Sync</button>
+        <button id="aiOpenBtn" class="foot-btn" title="Local AI access">✦ AI</button>
         <button id="exportBtn" class="foot-btn">↓ Export</button>
         <button id="importBtn" class="foot-btn">↑ Import</button>
         <input type="file" id="importFile" accept="application/json" class="hidden" />
+        <input type="file" id="aiChangesFile" accept="application/json" class="hidden" />
       </div>
       <div id="syncStatusShort" class="sync-status"></div>
     </aside>
@@ -87,6 +89,7 @@
   <script src="../lib/shares.js"></script>
   <script src="../lib/shortcuts.js"></script>
   <script src="../lib/supabase.js"></script>
+  <script src="../lib/ai-export.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

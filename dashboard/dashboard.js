@@ -59,9 +59,11 @@ async function init() {
   el('newBoardBtn').addEventListener('click', () => openBoardModal(null));
   el('profileBtn').addEventListener('click', openProfileModal);
   el('syncOpenBtn').addEventListener('click', openSyncModal);
+  el('aiOpenBtn').addEventListener('click', openAiModal);
   el('exportBtn').addEventListener('click', exportJson);
   el('importBtn').addEventListener('click', () => el('importFile').click());
   el('importFile').addEventListener('change', importJson);
+  el('aiChangesFile').addEventListener('change', reviewAiChanges);
   el('commandsBtn').addEventListener('click', openCommandPalette);
   el('paletteBack').addEventListener('click', (e) => {
     if (e.target === el('paletteBack')) closeCommandPalette();
@@ -163,6 +165,9 @@ function paletteCommands() {
       renderContent();
     } },
     { title: 'Cloud sync', kind: 'Settings', icon: '☁', keywords: 'supabase', run: openSyncModal },
+    { title: 'AI access', kind: 'Data', icon: '✦', keywords: 'mcp local llm assistant api', run: openAiModal },
+    { title: 'Export for AI', kind: 'Data', icon: '✦', keywords: 'snapshot mcp llm', run: exportAiSnapshot },
+    { title: 'Apply AI changes', kind: 'Data', icon: '✓', keywords: 'review staged mcp llm', run: () => el('aiChangesFile').click() },
     { title: 'Export collection', kind: 'Data', icon: '↓', keywords: 'backup json', run: exportJson },
     { title: 'Import collection', kind: 'Data', icon: '↑', keywords: 'restore json', run: () => el('importFile').click() },
     { title: 'Keyboard shortcuts', kind: 'Settings', icon: '⌨', keywords: 'hotkeys customize capture command palette', run: openShortcutSettings },
@@ -1427,6 +1432,293 @@ async function importJson(e) {
   } catch (err) {
     toast('Import failed: ' + err.message);
   }
+}
+
+// ---------------------------------------------------------------- AI access
+
+function downloadJson(name, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function openAiModal() {
+  const liveItems = state.items.filter((i) => !i.deletedAt).length;
+  const liveBoards = state.boards.filter((b) => !b.deletedAt).length;
+  el('modal').innerHTML = `
+    <h2>✦ AI access</h2>
+    <div class="sync-hint">
+      Share your library with a local AI assistant through the MCP server in this
+      repository's <code>mcp/</code> folder. Nothing is uploaded: the snapshot stays
+      on this device, and AI writes wait for your review. The extension itself
+      never opens a network port.
+    </div>
+    <div class="ai-stats">${liveItems} saved item${liveItems === 1 ? '' : 's'} · ${liveBoards} board${liveBoards === 1 ? '' : 's'} · notes and tags included</div>
+    <ol class="ai-steps">
+      <li><b>Export</b> a snapshot. Save it as <code>linkclipper-library.json</code>, replacing the old copy.</li>
+      <li><b>Run</b> the server from the LinkClipper repository:
+        <pre class="ai-code">node mcp/server.cjs --library "path\\to\\linkclipper-library.json"</pre>
+      </li>
+      <li><b>Connect</b> Claude Desktop, Cursor or a local LLM. Setup, tools and the HTTP API are in <code>mcp/README.md</code>.</li>
+    </ol>
+    <div class="row">
+      <button id="aiExport" class="btn primary">Export AI snapshot</button>
+      <button id="aiApply" class="btn">Apply AI changes…</button>
+      <span class="spacer"></span>
+      <button id="aiClose" class="btn">Close</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="aiCopy" class="btn">Copy MCP config</button>
+    </div>
+    <div class="sync-hint">
+      AI writes go to <code>linkclipper-changes.json</code> next to the snapshot.
+      Nothing changes here until you pick that file and confirm. Deletions always ask first.
+    </div>`;
+
+  el('modalBack').classList.remove('hidden');
+  el('aiExport').addEventListener('click', exportAiSnapshot);
+  el('aiApply').addEventListener('click', () => el('aiChangesFile').click());
+  el('aiCopy').addEventListener('click', copyAiConfig);
+  el('aiClose').addEventListener('click', closeModal);
+}
+
+async function exportAiSnapshot() {
+  try {
+    let handle = null;
+    if (window.showSaveFilePicker) {
+      try {
+        handle = await window.showSaveFilePicker({
+          suggestedName: 'linkclipper-library.json',
+          types: [{ description: 'LinkClipper AI snapshot', accept: { 'application/json': ['.json'] } }],
+        });
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        handle = null;
+      }
+    }
+    const [items, boards] = await Promise.all([Store.listItems(), Store.listBoards()]);
+    let version = '';
+    try { version = chrome.runtime.getManifest().version; } catch (e) { /* plain page */ }
+    const data = AI.exportPayload(items, boards, version);
+    if (handle) {
+      const writable = await handle.createWritable();
+      await writable.write(JSON.stringify(data, null, 2));
+      await writable.close();
+    } else {
+      downloadJson('linkclipper-library.json', data);
+    }
+    closeModal();
+    toast('AI snapshot exported ✓');
+  } catch (err) {
+    toast('AI export failed: ' + err.message);
+  }
+}
+
+async function copyAiConfig() {
+  const snippet = JSON.stringify({
+    mcpServers: {
+      linkclipper: {
+        command: 'node',
+        args: [
+          'C:\\path\\to\\LinkClipper\\mcp\\server.cjs',
+          '--library',
+          'C:\\Users\\You\\Downloads\\linkclipper-library.json',
+        ],
+      },
+    },
+  }, null, 2);
+  try {
+    await navigator.clipboard.writeText(snippet);
+    toast('MCP config copied — edit the two paths');
+  } catch (e) {
+    toast('Copy failed; see mcp/README.md for the config');
+  }
+}
+
+async function reviewAiChanges(e) {
+  const file = e.currentTarget.files && e.currentTarget.files[0];
+  e.currentTarget.value = '';
+  if (!file) return;
+  let changes;
+  try {
+    changes = AI.normalizeChanges(JSON.parse(await file.text()));
+  } catch (err) {
+    toast('AI changes rejected: ' + err.message);
+    return;
+  }
+  renderAiReview(changes, file.name);
+}
+
+function aiItem(id) { return state.items.find((i) => i.id === id) || null; }
+
+function aiBoardLabel(raw) {
+  if (!raw) return 'Inbox';
+  const key = String(raw).trim().toLowerCase();
+  const board = state.boards.find((b) => b.id === raw) ||
+    state.boards.find((b) => (b.name || '').toLowerCase() === key);
+  return board ? board.name : String(raw);
+}
+
+function describeAiChange(change) {
+  if (change.op === 'create') {
+    return 'Add “' + (change.item.title || change.item.url) + '” to ' + aiBoardLabel(change.item.boardId);
+  }
+  if (change.op === 'update') {
+    const item = aiItem(change.itemId);
+    return 'Update “' + (item ? item.title : change.itemId) + '”';
+  }
+  if (change.op === 'move') {
+    return 'Move ' + change.itemIds.length + ' item' + (change.itemIds.length === 1 ? '' : 's') +
+      ' to ' + aiBoardLabel(change.boardId);
+  }
+  return 'Delete ' + change.itemIds.length + ' item' + (change.itemIds.length === 1 ? '' : 's');
+}
+
+function renderAiReview(changes, fileName) {
+  const counts = AI.summary(changes);
+  const rows = changes.slice(0, 12).map(describeAiChange);
+  const more = changes.length - rows.length;
+  el('modal').innerHTML = `
+    <h2>Review AI changes</h2>
+    <div class="sync-hint">
+      <code>${esc(fileName)}</code> asks for ${counts.create} add, ${counts.update} update,
+      ${counts.move} move, ${counts.delete} delete. Nothing has been applied yet.
+    </div>
+    <ul class="ai-list">
+      ${rows.map((row) => `<li>${esc(row)}</li>`).join('')}
+      ${more > 0 ? `<li>…and ${more} more</li>` : ''}
+    </ul>
+    ${counts.delete ? `<div class="ai-warn">Deleting removes ${counts.delete} item${counts.delete === 1 ? '' : 's'} from the library. It is a tombstone, so sync can carry the delete to other devices.</div>` : ''}
+    <div class="row">
+      <span class="spacer"></span>
+      <button id="aiReviewCancel" class="btn">Cancel</button>
+      <button id="aiReviewApply" class="btn primary">Apply ${changes.length} change${changes.length === 1 ? '' : 's'}</button>
+    </div>`;
+  el('modalBack').classList.remove('hidden');
+  el('aiReviewCancel').addEventListener('click', closeModal);
+  el('aiReviewApply').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.textContent = 'Applying…';
+    try {
+      const result = await applyAiChanges(changes);
+      await refresh({ markClean: false });
+      trySyncQuiet();
+      renderAiResult(result);
+    } catch (err) {
+      button.disabled = false;
+      button.textContent = 'Apply ' + changes.length + ' change' + (changes.length === 1 ? '' : 's');
+      toast('AI changes failed: ' + err.message);
+    }
+  });
+}
+
+async function applyAiChanges(changes) {
+  const items = await Store.listItems();
+  const boards = await Store.liveBoards();
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const applied = [];
+  const skipped = [];
+
+  const resolveBoard = (raw) => {
+    if (!raw) return null;
+    const key = String(raw).trim().toLowerCase();
+    return boards.find((b) => b.id === raw) ||
+      boards.find((b) => (b.name || '').toLowerCase() === key) || null;
+  };
+
+  for (const change of changes) {
+    if (change.op === 'create') {
+      const board = resolveBoard(change.item.boardId) ||
+        boards.find((b) => b.id === 'inbox') || boards[0];
+      if (!board) { skipped.push('Add ' + change.item.url + ': unknown board'); continue; }
+      const existing = await Store.findByUrl(change.item.url, change.item.canonical);
+      if (existing) { skipped.push('Add ' + change.item.url + ': already saved'); continue; }
+      const patch = Object.assign({}, change.item, { boardId: board.id });
+      delete patch.id;
+      delete patch.createdAt;
+      delete patch.updatedAt;
+      delete patch.deletedAt;
+      if (!patch.source) {
+        try { patch.source = new URL(patch.url).hostname.replace(/^www\./, ''); } catch (e) { /* keep empty */ }
+      }
+      const saved = await Store.saveItem(patch);
+      byId.set(saved.id, saved);
+      applied.push('Added “' + (patch.title || patch.url) + '”');
+      continue;
+    }
+
+    if (change.op === 'update') {
+      const item = byId.get(change.itemId);
+      if (!item || item.deletedAt) { skipped.push('Update ' + change.itemId + ': item not found'); continue; }
+      if (change.baseUpdatedAt && item.updatedAt !== change.baseUpdatedAt) {
+        skipped.push('Update “' + item.title + '”: changed since the snapshot');
+        continue;
+      }
+      const patch = Object.assign({}, change.patch);
+      if (patch.boardId) {
+        const board = resolveBoard(patch.boardId);
+        if (!board) { skipped.push('Update “' + item.title + '”: unknown board'); continue; }
+        patch.boardId = board.id;
+      }
+      patch.id = item.id;
+      const savedUpdate = await Store.saveItem(patch);
+      byId.set(savedUpdate.id, savedUpdate);
+      applied.push('Updated “' + item.title + '”');
+      continue;
+    }
+
+    if (change.op === 'move') {
+      const board = resolveBoard(change.boardId);
+      if (!board) { skipped.push('Move: unknown board ' + change.boardId); continue; }
+      const ids = change.itemIds.filter((id) => byId.has(id));
+      if (!ids.length) { skipped.push('Move: no matching items'); continue; }
+      if (ids.length !== change.itemIds.length) {
+        skipped.push('Move: ' + (change.itemIds.length - ids.length) + ' item(s) not found');
+      }
+      await Store.bulkUpdateItems(ids, (item) => (item.boardId === board.id ? null : { boardId: board.id }));
+      applied.push('Moved ' + ids.length + ' item' + (ids.length === 1 ? '' : 's') + ' to ' + board.name);
+      continue;
+    }
+
+    if (change.op === 'delete') {
+      for (const id of change.itemIds) {
+        const item = byId.get(id);
+        if (!item || item.deletedAt) { skipped.push('Delete ' + id + ': item not found'); continue; }
+        const base = change.baseUpdatedAt && change.baseUpdatedAt[id];
+        if (base && item.updatedAt !== base) {
+          skipped.push('Delete “' + item.title + '”: changed since the snapshot');
+          continue;
+        }
+        await Store.deleteItem(id);
+        applied.push('Deleted “' + item.title + '”');
+      }
+    }
+  }
+
+  return { applied, skipped };
+}
+
+function renderAiResult(result) {
+  const applied = result.applied || [];
+  const skipped = result.skipped || [];
+  el('modal').innerHTML = `
+    <h2>${applied.length ? 'AI changes applied' : 'No changes applied'}</h2>
+    <div class="sync-hint">
+      ${applied.length} change${applied.length === 1 ? '' : 's'} applied${skipped.length ? `, ${skipped.length} skipped` : ''}.
+    </div>
+    ${applied.length ? `<ul class="ai-list">${applied.slice(0, 10).map((row) => `<li>${esc(row)}</li>`).join('')}</ul>` : ''}
+    ${skipped.length ? `<div class="field-label">Skipped</div><ul class="ai-list">${skipped.slice(0, 20).map((row) => `<li>${esc(row)}</li>`).join('')}</ul>` : ''}
+    <div class="row">
+      <span class="spacer"></span>
+      <button id="aiResultClose" class="btn primary">Done</button>
+    </div>`;
+  el('modalBack').classList.remove('hidden');
+  el('aiResultClose').addEventListener('click', closeModal);
+  toast(skipped.length ? 'AI changes applied with ' + skipped.length + ' skipped' : 'AI changes applied ✓');
 }
 
 // ------------------------------------------------------------------ toast

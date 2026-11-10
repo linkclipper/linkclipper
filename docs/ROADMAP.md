@@ -40,6 +40,19 @@ LinkClipper is being built deliberately: each phase ships standalone value and l
 - ⬜ Monetization (Pro features only; never selling data)
 - ⬜ Maybe: public web app (non-extension) reading the same backend
 
+## Local AI access (in progress, cross-cutting)
+
+- ✅ Dashboard **AI** panel: export a snapshot, review and apply staged changes
+- ✅ Local MCP server over stdio (search, read, boards, tags, stats)
+- ✅ Full management tools staged for review: add, update, move, delete
+- ✅ Localhost HTTP API (`127.0.0.1`, bearer token) for local LLMs and adapters
+- ⬜ Phase 2 live bridge: real-time reads and direct writes with per-tool permissions
+- ⬜ Optional on-device embedding index for semantic search (no cloud embeddings)
+- ⬜ Reader-text refresh inside the AI export on a schedule the user controls
+
+The snapshot and change files stay on the user's machine. No AI provider is
+called by LinkClipper.
+
 ## Non-goals
 
 - Ads, data selling, tracking pixels

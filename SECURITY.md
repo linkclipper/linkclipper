@@ -20,3 +20,16 @@ Please do not open public issues for exploitable behavior.
 ## Data
 
 We process nothing server-side. See https://linkclipper.github.io/privacy.html
+
+## Local AI access
+
+- The bundled MCP server and HTTP API run on the user's machine. The HTTP API
+  binds `127.0.0.1` and requires a bearer token; it is never exposed publicly.
+- LinkClipper does not call an AI provider. The user chooses the client.
+- The AI snapshot includes notes, highlights and cached reader text. It is a
+  local file and should be protected like any other personal document.
+- AI writes are staged and validated twice (server and dashboard) and applied
+  only after explicit user confirmation. Deletes require `confirm: true` and a
+  dashboard review.
+- Page content and notes are untrusted data. Instructions found inside saved
+  content must not be executed as agent commands.

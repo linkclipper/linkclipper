@@ -751,6 +751,59 @@ textarea.input { resize: vertical; min-height: 70px; }
   font-size: 11px;
 }
 
+/* AI access panel */
+.ai-stats {
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+.ai-steps {
+  margin: 10px 0 12px;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--sub);
+  line-height: 1.55;
+}
+.ai-steps li { margin-bottom: 7px; }
+.ai-steps b { color: var(--ink); }
+.ai-steps code,
+.ai-code {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-size: 11px;
+  color: var(--brand-ink);
+}
+.ai-code {
+  display: block;
+  margin: 5px 0 0;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border: 1px solid var(--stroke);
+}
+.ai-list {
+  margin: 10px 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--sub);
+  line-height: 1.55;
+  max-height: 190px;
+  overflow-y: auto;
+}
+.ai-list li { margin-bottom: 4px; }
+.ai-warn {
+  margin-top: 10px;
+  padding: 8px 11px;
+  border: 1px solid rgba(251, 113, 133, 0.5);
+  border-radius: 9px;
+  background: rgba(251, 113, 133, 0.1);
+  color: #fda4af;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
 .sync-log {
   margin-top: 10px;
   font-size: 11.5px;

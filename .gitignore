@@ -2,3 +2,5 @@
 *.zip
 tools/store-assets/
 *.png.tmp
+linkclipper-library.json
+linkclipper-changes.json*

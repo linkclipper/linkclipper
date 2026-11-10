@@ -12,6 +12,12 @@
 - Social saves now prefer media belonging to the X post rather than an avatar or
   unrelated image. Text-only and broken-image posts show an offline source mark;
   recognizable source badges also appear on collection cards and save previews.
+- **Local AI access (phase 1):** dashboard **AI** panel exports a snapshot and
+  applies reviewed AI changes. The dependency-free MCP server in `mcp/` reads the
+  snapshot over stdio and exposes search, read and staged create/update/move/
+  delete tools; `--http` adds a bearer-token localhost API for local LLMs and
+  adapters. Nothing is sent to a cloud AI service, and AI writes are staged in
+  `linkclipper-changes.json` until the user confirms them in the dashboard.
 
 ## 0.4.0 — share links and local-first polish (2026-11-08)
 

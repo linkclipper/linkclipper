@@ -24,9 +24,11 @@
       </button>
       <div class="sidebar-foot">
         <button id="syncOpenBtn" class="foot-btn">☁ Sync</button>
+        <button id="aiOpenBtn" class="foot-btn" title="Local AI access">✦ AI</button>
         <button id="exportBtn" class="foot-btn">↓ Export</button>
         <button id="importBtn" class="foot-btn">↑ Import</button>
         <input type="file" id="importFile" accept="application/json" class="hidden" />
+        <input type="file" id="aiChangesFile" accept="application/json" class="hidden" />
       </div>
       <div id="syncStatusShort" class="sync-status"></div>
     </aside>
@@ -124,14 +126,30 @@
   <script src="../lib/shares.js"></script>
   <script src="../lib/shortcuts.js"></script>
   <script src="../lib/supabase.js"></script>
+  <script src="../lib/ai-export.js"></script>
   <script src="dashboard.js"></script>
   <script>
     // ?state=… drives scripted UI states for screenshots
     const st = new URLSearchParams(location.search).get('state');
+    const demoAiChanges = () => AI.normalizeChanges({
+      app: 'LinkClipper', kind: 'ai-changes', version: 1,
+      changes: [
+        { op: 'create', item: { url: 'https://example.org/ai-new', title: 'AI-added article', board: 'Inbox', tags: ['ai', 'new'] } },
+        { op: 'update', itemId: 'i-art', baseUpdatedAt: '2026-11-03T10:00:00Z', patch: { note: 'Reviewed by the local model' } },
+        { op: 'move', itemIds: ['i-vim'], board: 'inbox' },
+        { op: 'delete', itemIds: ['i-page'], baseUpdatedAt: { 'i-page': '2026-11-04T10:00:00Z' } },
+      ],
+    });
     if (st) setTimeout(() => {
       if (st === 'item') openItemModal('i-yt');
       else if (st === 'igitem') openItemModal('i-ig');
       else if (st === 'board') openBoardModal();
+      else if (st === 'ai') openAiModal();
+      else if (st === 'ai-review') renderAiReview(demoAiChanges(), 'linkclipper-changes.json');
+      else if (st === 'ai-applied') applyAiChanges(demoAiChanges()).then(async (result) => {
+        await refresh({ markClean: false });
+        renderAiResult(result);
+      });
       else if (st === 'sync') openSyncModal();
       else if (st === 'toast') toast('Saved ✓');
       else if (st === 'empty') { state.items = []; renderContent(); }
